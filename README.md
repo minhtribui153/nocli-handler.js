@@ -81,5 +81,29 @@ client.login('<bot_token>');
 
 
 # Creating a Command
-## Javascript
-``````
+## JavaScript
+```js
+const { Client, Message } = require('discord.js')
+
+module.exports = {
+  minArgs: 0, // Optional: Default = 0
+  maxArgs: -1, // Optional: Default = -1 (Infinity),
+  description: "<command_description>",
+  /**
+     * 
+     * @param {{ client: Client, message: Message, args: string[], text: string }} param0 
+  */
+  callback: ({ client, message, args }) => {}
+}
+```
+## TypeScript
+```ts
+import { ICommand } from 'nocli-handler.js';
+
+export default {
+  minArgs: 0, // Optional: Default = 0
+  maxArgs: -1, // Optional: Default = -1 (Infinity),
+  description: "<command_description>",
+  callback: ({ client, message, args }) => {}
+} as ICommand;
+```
