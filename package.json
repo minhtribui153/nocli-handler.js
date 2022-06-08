@@ -1,0 +1,30 @@
+{
+  "name": "nocli-handler.js",
+  "version": "1.0.0",
+  "description": "Next generation Discord.JS Handler for future Discord Bots",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "npx tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tribui141108/nocli-handler.js"
+  },
+  "keywords": [
+    "command handler"
+  ],
+  "author": "tribui141108",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "chalk": "^2.4.1",
+    "discord.js": "^13.8.0",
+    "mongoose": "^6.3.5",
+    "node-banner": "^1.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.38",
+    "ts-node": "^10.8.0",
+    "typescript": "^4.7.2"
+  }
+}
