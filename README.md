@@ -45,7 +45,8 @@ client.on("ready", () => {
         mongoDB: {
           uri: "<your_mongodb_connection_string>",
           options: {} // Optional, leave blank if you want database to only keep alive
-        }
+        },
+        language: "JavaScript"
     })
 });
 
@@ -72,7 +73,8 @@ client.on("ready", () => {
         mongoDB: {
           uri: "<your_mongodb_connection_string>",
           options: {} // Optional, leave blank if you want database to only keep alive
-        }
+        },
+        language: "TypeScript"
     })
 });
 

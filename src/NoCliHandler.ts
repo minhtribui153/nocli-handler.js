@@ -21,6 +21,7 @@ class NoCliHandler {
         //     await showBanner("NoCliHandler.JS", "Version 1.0.0", "green", "red")
         // }
         try {
+            if (!this.options.language || (this.options.language !== "JavaScript" && this.options.language !== "TypeScript")) throw new NoCliHandlerError("Invalid language specified");
             if (!this.options.client) throw new NoCliHandlerError("No client provided");
             this.options.client
                 .setMaxListeners(Infinity)
