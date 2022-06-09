@@ -5,6 +5,7 @@ import showBanner from 'node-banner';
 
 import { NoCliHandlerOptions } from "./types";
 import { log } from "./functions/log";
+import { version } from '../package.json';
 
 
 class NoCliHandler {
@@ -16,10 +17,8 @@ class NoCliHandler {
     }
 
     private async main() {
-        // if (this.showBanner) {
-        //     console.clear()
-        //     await showBanner("NoCliHandler.JS", "Version 1.0.0", "green", "red")
-        // }
+        console.clear()
+        await showBanner("NoCliHandler.JS", `Version ${version}`, "green", "red")
         try {
             if (!this.options.language || (this.options.language !== "JavaScript" && this.options.language !== "TypeScript")) throw new NoCliHandlerError("Invalid language specified");
             if (!this.options.client) throw new NoCliHandlerError("No client provided");

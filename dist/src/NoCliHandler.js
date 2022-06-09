@@ -42,7 +42,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var CommandHandler_1 = __importDefault(require("./command-handler/CommandHandler"));
 var NoCliHandlerError_1 = __importDefault(require("./errors/NoCliHandlerError"));
 var mongoose_1 = __importDefault(require("mongoose"));
+var node_banner_1 = __importDefault(require("node-banner"));
 var log_1 = require("./functions/log");
+var package_json_1 = require("../package.json");
 var NoCliHandler = /** @class */ (function () {
     function NoCliHandler(options) {
         this.options = options;
@@ -52,30 +54,35 @@ var NoCliHandler = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             var commandHandlerInstance, error;
             return __generator(this, function (_a) {
-                // if (this.showBanner) {
-                //     console.clear()
-                //     await showBanner("NoCliHandler.JS", "Version 1.0.0", "green", "red")
-                // }
-                try {
-                    if (!this.options.client)
-                        throw new NoCliHandlerError_1.default("No client provided");
-                    this.options.client
-                        .setMaxListeners(Infinity)
-                        .on("ready", function (bot) { return (0, log_1.log)("NoCliHandler", "info", "Your bot ".concat(bot.user.tag, " is up and running")); });
-                    if (this.options.commandsDir) {
-                        commandHandlerInstance = new CommandHandler_1.default(this.options.commandsDir, this.options.language);
-                        commandHandlerInstance.messageListener(this.options.client);
-                    }
-                    this.options.mongoDB !== undefined
-                        ? this.connectToMongoDB(this.options.mongoDB)
-                        : (0, log_1.log)("NoCliHandler", "warn", "No mongoURI provided");
+                switch (_a.label) {
+                    case 0:
+                        console.clear();
+                        return [4 /*yield*/, (0, node_banner_1.default)("NoCliHandler.JS", "Version ".concat(package_json_1.version), "green", "red")];
+                    case 1:
+                        _a.sent();
+                        try {
+                            if (!this.options.language || (this.options.language !== "JavaScript" && this.options.language !== "TypeScript"))
+                                throw new NoCliHandlerError_1.default("Invalid language specified");
+                            if (!this.options.client)
+                                throw new NoCliHandlerError_1.default("No client provided");
+                            this.options.client
+                                .setMaxListeners(Infinity)
+                                .on("ready", function (bot) { return (0, log_1.log)("NoCliHandler", "info", "Your bot ".concat(bot.user.tag, " is up and running")); });
+                            if (this.options.commandsDir) {
+                                commandHandlerInstance = new CommandHandler_1.default(this.options.commandsDir, this.options.language);
+                                commandHandlerInstance.messageListener(this.options.client);
+                            }
+                            this.options.mongoDB !== undefined
+                                ? this.connectToMongoDB(this.options.mongoDB)
+                                : (0, log_1.log)("NoCliHandler", "warn", "No mongoURI provided");
+                        }
+                        catch (err) {
+                            error = err;
+                            (0, log_1.log)(error.name, "error", error.message);
+                            return [2 /*return*/, process.exit(1)];
+                        }
+                        return [2 /*return*/];
                 }
-                catch (err) {
-                    error = err;
-                    (0, log_1.log)(error.name, "error", error.message);
-                    return [2 /*return*/, process.exit(1)];
-                }
-                return [2 /*return*/];
             });
         });
     };

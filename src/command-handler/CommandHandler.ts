@@ -25,7 +25,7 @@ class CommandHandler {
         this.readFiles()
     }
 
-    private readFiles() {
+    private async readFiles() {
         const validations = this._syntaxValidations;
         const files = getAllFiles(this.commandsDir);
 
@@ -36,7 +36,7 @@ class CommandHandler {
             if (commandSuffix !== this._suffix) continue;
             const commandObject: ICommand = this._suffix === "js"
                 ? require(file)
-                : import(file);
+                : await this.importFile(file);
 
             const command = new Command(commandName, commandObject);
 

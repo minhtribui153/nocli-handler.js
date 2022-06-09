@@ -1,11 +1,10 @@
 <div align="center">
   <br />
   <p>
-    <!-- Place Banner here --->
     <img src="./assets/Banner.png" width=500 />
   </p>
   <br />
-  <!-- Place Badges here -->
+  <img src="https://nodei.co/npm/nocli-handler.js.png" />
   <p></p>
 </div>
 
@@ -85,18 +84,17 @@ client.login('<bot_token>');
 # Creating a Command
 ## JavaScript
 ```js
-const { Client, Message } = require('discord.js')
-
-module.exports = {
+/**
+ * @type {import("nocli-handler.js").ICommand}
+ */
+const Command = {
   minArgs: 0, // Optional: Default = 0
   maxArgs: -1, // Optional: Default = -1 (Infinity),
   description: "<command_description>",
-  /**
-     * 
-     * @param {{ client: Client, message: Message, args: string[], text: string }} param0 
-  */
   callback: ({ client, message, args }) => {}
 }
+
+module.exports = Command;
 ```
 ## TypeScript
 ```ts

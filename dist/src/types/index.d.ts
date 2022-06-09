@@ -37,7 +37,6 @@ export interface ICommand {
     usage?: string;
     callback: (options: CommandCallbackOptions) => void;
 }
-export declare type CommandValidationCallbackType<T> = (command: T, usage: CommandCallbackOptions, prefix: string) => boolean;
 export declare type CommandCallbackOptions = {
     /** The Discord.JS Client Instance */
     client: Client;

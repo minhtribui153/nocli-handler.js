@@ -79,28 +79,50 @@ var CommandHandler = /** @class */ (function () {
         this.readFiles();
     }
     CommandHandler.prototype.readFiles = function () {
-        var validations = this._syntaxValidations;
-        var files = (0, get_all_files_1.default)(this.commandsDir);
-        for (var _i = 0, files_1 = files; _i < files_1.length; _i++) {
-            var file = files_1[_i];
-            var commandProperty = file.split(/[/\\]/).pop().split(".");
-            var commandName = commandProperty[0];
-            var commandSuffix = commandProperty[1];
-            if (commandSuffix !== this._suffix)
-                continue;
-            var commandObject = this._suffix === "js"
-                ? require(file)
-                : Promise.resolve().then(function () { return __importStar(require(file)); });
-            var command = new Command_1.default(commandName, commandObject);
-            for (var _a = 0, validations_1 = validations; _a < validations_1.length; _a++) {
-                var validation = validations_1[_a];
-                validation(command);
-            }
-            this.commands.set(command.commandName, command);
-        }
-        var noCommands = this.commands.size === 0;
-        var isOneOnly = this.commands.size === 1;
-        (0, log_1.log)("NoCliHandler", "info", noCommands ? "No commands found" : "Loaded ".concat(this.commands.size, " command").concat(isOneOnly ? "" : "s"));
+        return __awaiter(this, void 0, void 0, function () {
+            var validations, files, _i, files_1, file, commandProperty, commandName, commandSuffix, commandObject, _a, command, _b, validations_1, validation, noCommands, isOneOnly;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0:
+                        validations = this._syntaxValidations;
+                        files = (0, get_all_files_1.default)(this.commandsDir);
+                        _i = 0, files_1 = files;
+                        _c.label = 1;
+                    case 1:
+                        if (!(_i < files_1.length)) return [3 /*break*/, 6];
+                        file = files_1[_i];
+                        commandProperty = file.split(/[/\\]/).pop().split(".");
+                        commandName = commandProperty[0];
+                        commandSuffix = commandProperty[1];
+                        if (commandSuffix !== this._suffix)
+                            return [3 /*break*/, 5];
+                        if (!(this._suffix === "js")) return [3 /*break*/, 2];
+                        _a = require(file);
+                        return [3 /*break*/, 4];
+                    case 2: return [4 /*yield*/, this.importFile(file)];
+                    case 3:
+                        _a = _c.sent();
+                        _c.label = 4;
+                    case 4:
+                        commandObject = _a;
+                        command = new Command_1.default(commandName, commandObject);
+                        for (_b = 0, validations_1 = validations; _b < validations_1.length; _b++) {
+                            validation = validations_1[_b];
+                            validation(command);
+                        }
+                        this.commands.set(command.commandName, command);
+                        _c.label = 5;
+                    case 5:
+                        _i++;
+                        return [3 /*break*/, 1];
+                    case 6:
+                        noCommands = this.commands.size === 0;
+                        isOneOnly = this.commands.size === 1;
+                        (0, log_1.log)("NoCliHandler", "info", noCommands ? "No commands found" : "Loaded ".concat(this.commands.size, " command").concat(isOneOnly ? "" : "s"));
+                        return [2 /*return*/];
+                }
+            });
+        });
     };
     CommandHandler.prototype.importFile = function (filePath) {
         return __awaiter(this, void 0, void 0, function () {

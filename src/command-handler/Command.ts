@@ -1,5 +1,4 @@
-import NoCliCommandError from '../errors/NoCliCommandError';
-import { ICommand, NoCliLanguageType } from '../types';
+import { ICommand } from '../types';
 
 class Command {
     private _commandName: string;
