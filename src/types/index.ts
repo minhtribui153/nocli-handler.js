@@ -15,7 +15,11 @@ export type NoCliHandlerOptions = {
     };
     /** The directory where the commands are stored */
     commandsDir?: string;
+    /** The language you are using to develop your Discord.JS Bot  */
+    language: NoCliLanguageType;
 }
+
+export type NoCliLanguageType = "TypeScript" | "JavaScript";
 
 // Command Reference:
 export interface ICommand {
@@ -39,8 +43,6 @@ export interface ICommand {
     usage?: string;
     callback: (options: CommandCallbackOptions) => void;
 }
-
-export type CommandValidationCallbackType<T> = (command: T, usage: CommandCallbackOptions, prefix: string) => boolean;
 
 export type CommandCallbackOptions = {
     /** The Discord.JS Client Instance */

@@ -12,7 +12,10 @@ export declare type NoCliHandlerOptions = {
     };
     /** The directory where the commands are stored */
     commandsDir?: string;
+    /** The language you are using to develop your Discord.JS Bot  */
+    language: NoCliLanguageType;
 };
+export declare type NoCliLanguageType = "TypeScript" | "JavaScript";
 export interface ICommand {
     /** The description of the command */
     description: string;

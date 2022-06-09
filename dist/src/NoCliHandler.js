@@ -63,7 +63,7 @@ var NoCliHandler = /** @class */ (function () {
                         .setMaxListeners(Infinity)
                         .on("ready", function (bot) { return (0, log_1.log)("NoCliHandler", "info", "Your bot ".concat(bot.user.tag, " is up and running")); });
                     if (this.options.commandsDir) {
-                        commandHandlerInstance = new CommandHandler_1.default(this.options.commandsDir);
+                        commandHandlerInstance = new CommandHandler_1.default(this.options.commandsDir, this.options.language);
                         commandHandlerInstance.messageListener(this.options.client);
                     }
                     this.options.mongoDB !== undefined

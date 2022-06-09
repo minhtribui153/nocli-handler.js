@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var NoCliCommandError_1 = __importDefault(require("../../errors/NoCliCommandError"));
+var NoCliCommandError_1 = __importDefault(require("../../../errors/NoCliCommandError"));
 exports.default = (function (command, usage, prefix) {
     var _a, _b;
     var _c = command.commandObject, _d = _c.minArgs, minArgs = _d === void 0 ? 0 : _d, _e = _c.maxArgs, maxArgs = _e === void 0 ? -1 : _e;

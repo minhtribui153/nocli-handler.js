@@ -6,8 +6,9 @@ import showBanner from 'node-banner';
 import { NoCliHandlerOptions } from "./types";
 import { log } from "./functions/log";
 
+
 class NoCliHandler {
-    private options: NoCliHandlerOptions;
+    public options: NoCliHandlerOptions;
     
     constructor(options: NoCliHandlerOptions) {
         this.options = options;
@@ -26,7 +27,7 @@ class NoCliHandler {
                 .on("ready", bot => log("NoCliHandler", "info", `Your bot ${bot.user.tag} is up and running`));
 
             if (this.options.commandsDir) {
-                const commandHandlerInstance = new CommandHandler(this.options.commandsDir);
+                const commandHandlerInstance = new CommandHandler(this.options.commandsDir, this.options.language);
                 commandHandlerInstance.messageListener(this.options.client);
             }
     
@@ -46,5 +47,4 @@ class NoCliHandler {
             : log("NoCliHandler", "info", "Connected to MongoDB"));
     }
 }
-
 export default NoCliHandler;

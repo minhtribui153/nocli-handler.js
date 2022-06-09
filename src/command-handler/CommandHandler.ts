@@ -1,32 +1,47 @@
 // Default import
+import { Client } from "discord.js";
+import { ICommand, NoCliLanguageType } from "../types";
+import { log } from "../functions/log";
 import getAllFiles from "../util/get-all-files";
 import Command from "./Command";
-import { Client } from "discord.js";
-import { CommandValidationCallbackType, ICommand } from "../types";
 
 // Validation imports
-import argumentCount from "./validations/argument-count";
-import { log } from "../functions/log";
+import argumentCount from "./validations/run-time/argument-count";
+import callbackRequired from "./validations/syntax/callback-required";
+import descriptionRequired from "./validations/syntax/description-required";
 
 
 class CommandHandler {
     public commands: Map<string, Command> = new Map();
     public commandsDir: string;
-    private validations: CommandValidationCallbackType<Command>[] = [argumentCount];
 
-    constructor(commandsDir: string) {
+    private _suffix: "js" | "ts";
+    private _runTimeValidations = [argumentCount];
+    private _syntaxValidations = [callbackRequired, descriptionRequired];
+
+    constructor(commandsDir: string, language: NoCliLanguageType) {
         this.commandsDir = commandsDir;
+        this._suffix = language === "TypeScript" ? "ts" : "js";
         this.readFiles()
     }
 
     private readFiles() {
+        const validations = this._syntaxValidations;
         const files = getAllFiles(this.commandsDir);
 
         for (const file of files) {
-            const commandObject = require(file) as ICommand;
-            let commandName = file.split(/[/\\]/).pop()!.split(".")[0];
+            const commandProperty = file.split(/[/\\]/).pop()!.split(".");
+            const commandName = commandProperty[0];
+            const commandSuffix = commandProperty[1];
+            if (commandSuffix !== this._suffix) continue;
+            const commandObject: ICommand = this._suffix === "js"
+                ? require(file)
+                : import(file);
 
             const command = new Command(commandName, commandObject);
+
+            for (const validation of validations) validation(command)
+
             this.commands.set(command.commandName, command);
         }
         const noCommands = this.commands.size === 0;
@@ -34,8 +49,15 @@ class CommandHandler {
         log("NoCliHandler", "info", noCommands ? "No commands found" : `Loaded ${this.commands.size} command${isOneOnly ? "" : "s"}`);
     }
 
-    messageListener(client: Client) {
+    async importFile(filePath: string) {
+        const file = await (import(filePath));
+        return file?.default;
+    }
+
+    async messageListener(client: Client) {
         const prefix = '!';
+
+        const validations = this._runTimeValidations;
 
         client.on("messageCreate", (message) => {
             const { author, content } = message;
@@ -50,7 +72,7 @@ class CommandHandler {
 
             const usage = { client, message, args, text: args.join(" ") }
 
-            for (const validation of this.validations) {
+            for (const validation of validations) {
                 if (!validation(command, usage, prefix)) return;
             }
 

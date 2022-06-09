@@ -1,6 +1,6 @@
-import NoCliCommandError from "../../errors/NoCliCommandError";
-import { CommandCallbackOptions } from "../../types";
-import Command from "../Command";
+import NoCliCommandError from "../../../errors/NoCliCommandError";
+import { CommandCallbackOptions } from "../../../types";
+import Command from "../../Command";
 
 export default (command: Command, usage: CommandCallbackOptions, prefix: string) => {
     const { minArgs = 0, maxArgs = -1 } = command.commandObject;

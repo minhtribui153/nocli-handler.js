@@ -1,6 +1,6 @@
 import { NoCliHandlerOptions } from "./types";
 declare class NoCliHandler {
-    private options;
+    options: NoCliHandlerOptions;
     constructor(options: NoCliHandlerOptions);
     private main;
     private connectToMongoDB;
