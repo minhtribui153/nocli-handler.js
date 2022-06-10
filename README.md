@@ -25,8 +25,9 @@ npm install nocli-handler.js
 # Setup
 ### JavaScript
 ```js
-const NoCliHandler = require('nocli-handler.js').default;
 const { Client, Intents } = require('discord.js');
+const path = require('path');
+const NoCliHandler = require('nocli-handler.js').default;
 
 const client = new Client({
     intents: [
@@ -36,25 +37,32 @@ const client = new Client({
     ]
 });
 
-client.on("ready", () => {
-    console.log(`[INFO] Bot ${client.user.tag} is ready`);
-    new NoCliHandler({
-        client,
-        commandsDir: path.join(__dirname, "<the_commands_directory>"),
-        mongoDB: {
-          uri: "<your_mongodb_connection_string>",
-          options: {} // Optional, leave blank if you want database to only keep alive
-        },
-        language: "JavaScript"
-    })
+const instance = new NoCliHandler({
+    client,                                    // The Discord.JS Client you initialized
+    mongoDB: {
+        uri: '',                               // The MongoDB connection string
+        options: {}                            // The MongoDB options (optional)
+    },
+    configuration: {
+        defaultPrefix: "",                     // Sets the default prefix (default = "!")
+        commandsDir: path.join(__dirname, ''), // Sets the directory where the commands are located
+        featuresDir: path.join(__dirname, ''), // Sets the directory where the features are located (will be implemented in the next version)
+    },
+    debugging: {
+        showFullErrorLog: false,               // Whether or not to show the full error log (default = false)
+        showBanner: true,                      // Whether or not to show the banner upon the start of the program (default = true)
+    },
+    language: "JavaScript",                    // The language you are using to develop your Discord.JS Bot
 });
 
 client.login('<bot_token>');
 ```
+
 ### TypeScript
 ```ts
-import NoCliHandler from 'nocli-handler.js';
 import { Client, Intents } from 'discord.js';
+import path from 'path';
+import NoCliHandler from 'nocli-handler.js';
 
 const client = new Client({
     intents: [
@@ -64,17 +72,22 @@ const client = new Client({
     ]
 });
 
-client.on("ready", () => {
-    console.log(`[INFO] Bot ${client.user.tag} is ready`);
-    new NoCliHandler({
-        client,
-        commandsDir: path.join(__dirname, "<the_commands_directory>"),
-        mongoDB: {
-          uri: "<your_mongodb_connection_string>",
-          options: {} // Optional, leave blank if you want database to only keep alive
-        },
-        language: "TypeScript"
-    })
+const instance = new NoCliHandler({
+    client,                                    // The Discord.JS Client you initialized
+    mongoDB: {
+        uri: '',                               // The MongoDB connection string
+        options: {}                            // The MongoDB options (optional)
+    },
+    configuration: {
+        defaultPrefix: "",                     // Sets the default prefix (default = "!")
+        commandsDir: path.join(__dirname, ''), // Sets the directory where the commands are located
+        featuresDir: path.join(__dirname, ''), // Sets the directory where the features are located (will be implemented in the next version)
+    },
+    debugging: {
+        showFullErrorLog: false,               // Whether or not to show the full error log (default = false)
+        showBanner: true,                      // Whether or not to show the banner upon the start of the program (default = true)
+    },
+    language: "TypeScript",                    // The language you are using to develop your Discord.JS Bot
 });
 
 client.login('<bot_token>');
@@ -88,10 +101,10 @@ client.login('<bot_token>');
  * @type {import("nocli-handler.js").ICommand}
  */
 const Command = {
-  minArgs: 0, // Optional: Default = 0
-  maxArgs: -1, // Optional: Default = -1 (Infinity),
-  description: "<command_description>",
-  callback: ({ client, message, args }) => {}
+    minArgs: 0, // Optional: Default = 0
+    maxArgs: -1, // Optional: Default = -1 (Infinity),
+    description: "<command_description>",
+    callback: ({ client, message, args }) => {}
 }
 
 module.exports = Command;
@@ -101,9 +114,9 @@ module.exports = Command;
 import { ICommand } from 'nocli-handler.js';
 
 export default {
-  minArgs: 0, // Optional: Default = 0
-  maxArgs: -1, // Optional: Default = -1 (Infinity),
-  description: "<command_description>",
-  callback: ({ client, message, args }) => {}
+    minArgs: 0, // Optional: Default = 0
+    maxArgs: -1, // Optional: Default = -1 (Infinity),
+    description: "<command_description>",
+    callback: ({ client, message, args }) => {}
 } as ICommand;
 ```

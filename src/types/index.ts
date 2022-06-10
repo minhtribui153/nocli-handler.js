@@ -12,13 +12,26 @@ export type NoCliHandlerOptions = {
         uri: string;
         /** The MongoDB options (optional) */
         options?: ConnectOptions;
+    }
+    configuration: {
+        /** The default prefix for the bot (default prefix = "!") */
+        defaultPrefix?: string;
+        /** The directory where the commands are stored */
+        commandsDir?: string;
+        /** The directory where the features are stored */
+        featuresDir?: string;
     };
-    /** The directory where the commands are stored */
-    commandsDir?: string;
+    debugging?: {
+        /** Whether or not to show the full error log */
+        showFullErrorLog?: boolean;
+        /** Whether or not to show the banner upon the start of the program  */
+        showBanner?: boolean;
+    };
     /** The language you are using to develop your Discord.JS Bot  */
     language: NoCliLanguageType;
 }
 
+export type NoCliEnvironmentType = "PRODUCTION" | "DEVELOPMENT" | "TESTING";
 export type NoCliLanguageType = "TypeScript" | "JavaScript";
 
 // Command Reference:

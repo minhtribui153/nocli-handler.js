@@ -1,6 +1,6 @@
 // Default import
 import { Client } from "discord.js";
-import { ICommand, NoCliLanguageType } from "../types";
+import { ICommand, NoCliHandlerOptions, NoCliLanguageType } from "../types";
 import { log } from "../functions/log";
 import getAllFiles from "../util/get-all-files";
 import Command from "./Command";
@@ -9,6 +9,8 @@ import Command from "./Command";
 import argumentCount from "./validations/run-time/argument-count";
 import callbackRequired from "./validations/syntax/callback-required";
 import descriptionRequired from "./validations/syntax/description-required";
+import NoCliCommandError from "../errors/NoCliCommandError";
+import handleError from "../functions/handleError";
 
 
 class CommandHandler {
@@ -16,12 +18,16 @@ class CommandHandler {
     public commandsDir: string;
 
     private _suffix: "js" | "ts";
+    private _debugging: NoCliHandlerOptions["debugging"];
     private _runTimeValidations = [argumentCount];
     private _syntaxValidations = [callbackRequired, descriptionRequired];
+    private _defaultPrefix: string;
 
-    constructor(commandsDir: string, language: NoCliLanguageType) {
+    constructor(commandsDir: string, language: NoCliLanguageType, debugging: NoCliHandlerOptions["debugging"], defaultPrefix: string) {
         this.commandsDir = commandsDir;
         this._suffix = language === "TypeScript" ? "ts" : "js";
+        this._debugging = debugging;
+        this._defaultPrefix = defaultPrefix;
         this.readFiles()
     }
 
@@ -40,7 +46,16 @@ class CommandHandler {
 
             const command = new Command(commandName, commandObject);
 
-            for (const validation of validations) validation(command)
+            try {
+                for (const validate of validations) validate(command);
+            } catch (err) {
+                const error = err as any;
+                const showFullErrorLog = this._debugging !== undefined
+                    ? this._debugging.showFullErrorLog
+                    : false;
+
+                handleError(error, showFullErrorLog);
+            }
 
             this.commands.set(command.commandName, command);
         }
@@ -55,7 +70,7 @@ class CommandHandler {
     }
 
     async messageListener(client: Client) {
-        const prefix = '!';
+        const prefix = this._defaultPrefix;
 
         const validations = this._runTimeValidations;
 

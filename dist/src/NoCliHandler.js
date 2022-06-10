@@ -44,42 +44,58 @@ var NoCliHandlerError_1 = __importDefault(require("./errors/NoCliHandlerError"))
 var mongoose_1 = __importDefault(require("mongoose"));
 var node_banner_1 = __importDefault(require("node-banner"));
 var log_1 = require("./functions/log");
-var package_json_1 = require("../package.json");
+var handleError_1 = __importDefault(require("./functions/handleError"));
 var NoCliHandler = /** @class */ (function () {
     function NoCliHandler(options) {
-        this.options = options;
+        this._version = '1.0.2-stable';
+        this._defaultPrefix = "!";
+        this._options = options;
+        this._configuration = options.configuration;
+        this._debugging = options.debugging;
+        this._language = options.language;
+        if (this._configuration.defaultPrefix)
+            this._defaultPrefix = this._configuration.defaultPrefix;
         this.main();
     }
+    Object.defineProperty(NoCliHandler.prototype, "client", {
+        get: function () { return this._options.client; },
+        enumerable: false,
+        configurable: true
+    });
     NoCliHandler.prototype.main = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var commandHandlerInstance, error;
+            var commandHandlerInstance, error, showFullErrorLog;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         console.clear();
-                        return [4 /*yield*/, (0, node_banner_1.default)("NoCliHandler.JS", "Version ".concat(package_json_1.version), "green", "red")];
+                        return [4 /*yield*/, (0, node_banner_1.default)("NoCliHandler.JS", this._version, "green", "red")];
                     case 1:
                         _a.sent();
                         try {
-                            if (!this.options.language || (this.options.language !== "JavaScript" && this.options.language !== "TypeScript"))
+                            if (!this._language || (this._language !== "JavaScript" && this._language !== "TypeScript"))
                                 throw new NoCliHandlerError_1.default("Invalid language specified");
-                            if (!this.options.client)
+                            if (!this._options.client)
                                 throw new NoCliHandlerError_1.default("No client provided");
-                            this.options.client
+                            this._options.client
                                 .setMaxListeners(Infinity)
                                 .on("ready", function (bot) { return (0, log_1.log)("NoCliHandler", "info", "Your bot ".concat(bot.user.tag, " is up and running")); });
-                            if (this.options.commandsDir) {
-                                commandHandlerInstance = new CommandHandler_1.default(this.options.commandsDir, this.options.language);
-                                commandHandlerInstance.messageListener(this.options.client);
+                            if (this._configuration.commandsDir) {
+                                commandHandlerInstance = new CommandHandler_1.default(this._configuration.commandsDir, this._language, this._debugging, this._defaultPrefix);
+                                commandHandlerInstance.messageListener(this._options.client);
                             }
-                            this.options.mongoDB !== undefined
-                                ? this.connectToMongoDB(this.options.mongoDB)
+                            else
+                                (0, log_1.log)("NoCliHandler", "warn", "No commands directory provided, you will have to handle the commands yourself");
+                            this._options.mongoDB !== undefined
+                                ? this.connectToMongoDB(this._options.mongoDB)
                                 : (0, log_1.log)("NoCliHandler", "warn", "No mongoURI provided");
                         }
                         catch (err) {
                             error = err;
-                            (0, log_1.log)(error.name, "error", error.message);
-                            return [2 /*return*/, process.exit(1)];
+                            showFullErrorLog = this._debugging !== undefined
+                                ? this._debugging.showFullErrorLog
+                                : false;
+                            (0, handleError_1.default)(error, showFullErrorLog);
                         }
                         return [2 /*return*/];
                 }

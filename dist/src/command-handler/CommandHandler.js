@@ -69,18 +69,21 @@ var Command_1 = __importDefault(require("./Command"));
 var argument_count_1 = __importDefault(require("./validations/run-time/argument-count"));
 var callback_required_1 = __importDefault(require("./validations/syntax/callback-required"));
 var description_required_1 = __importDefault(require("./validations/syntax/description-required"));
+var handleError_1 = __importDefault(require("../functions/handleError"));
 var CommandHandler = /** @class */ (function () {
-    function CommandHandler(commandsDir, language) {
+    function CommandHandler(commandsDir, language, debugging, defaultPrefix) {
         this.commands = new Map();
         this._runTimeValidations = [argument_count_1.default];
         this._syntaxValidations = [callback_required_1.default, description_required_1.default];
         this.commandsDir = commandsDir;
         this._suffix = language === "TypeScript" ? "ts" : "js";
+        this._debugging = debugging;
+        this._defaultPrefix = defaultPrefix;
         this.readFiles();
     }
     CommandHandler.prototype.readFiles = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var validations, files, _i, files_1, file, commandProperty, commandName, commandSuffix, commandObject, _a, command, _b, validations_1, validation, noCommands, isOneOnly;
+            var validations, files, _i, files_1, file, commandProperty, commandName, commandSuffix, commandObject, _a, command, _b, validations_1, validate, error, showFullErrorLog, noCommands, isOneOnly;
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
@@ -106,9 +109,18 @@ var CommandHandler = /** @class */ (function () {
                     case 4:
                         commandObject = _a;
                         command = new Command_1.default(commandName, commandObject);
-                        for (_b = 0, validations_1 = validations; _b < validations_1.length; _b++) {
-                            validation = validations_1[_b];
-                            validation(command);
+                        try {
+                            for (_b = 0, validations_1 = validations; _b < validations_1.length; _b++) {
+                                validate = validations_1[_b];
+                                validate(command);
+                            }
+                        }
+                        catch (err) {
+                            error = err;
+                            showFullErrorLog = this._debugging !== undefined
+                                ? this._debugging.showFullErrorLog
+                                : false;
+                            (0, handleError_1.default)(error, showFullErrorLog);
                         }
                         this.commands.set(command.commandName, command);
                         _c.label = 5;
@@ -142,7 +154,7 @@ var CommandHandler = /** @class */ (function () {
             var prefix, validations;
             var _this = this;
             return __generator(this, function (_a) {
-                prefix = '!';
+                prefix = this._defaultPrefix;
                 validations = this._runTimeValidations;
                 client.on("messageCreate", function (message) {
                     var _a;
