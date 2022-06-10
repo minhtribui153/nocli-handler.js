@@ -47,7 +47,7 @@ var log_1 = require("./functions/log");
 var handleError_1 = __importDefault(require("./functions/handleError"));
 var NoCliHandler = /** @class */ (function () {
     function NoCliHandler(options) {
-        this._version = '1.0.2-stable';
+        this._version = '1.0.3';
         this._defaultPrefix = "!";
         this._options = options;
         this._configuration = options.configuration;
@@ -64,40 +64,49 @@ var NoCliHandler = /** @class */ (function () {
     });
     NoCliHandler.prototype.main = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var commandHandlerInstance, error, showFullErrorLog;
+            var showbanner, commandHandlerInstance, err_1, error, showFullErrorLog;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        _a.trys.push([0, 3, , 4]);
+                        showbanner = this._debugging !== undefined
+                            ? this._debugging.showBanner !== undefined
+                                ? true
+                                : false
+                            : false;
+                        if (!showbanner) return [3 /*break*/, 2];
                         console.clear();
                         return [4 /*yield*/, (0, node_banner_1.default)("NoCliHandler.JS", this._version, "green", "red")];
                     case 1:
                         _a.sent();
-                        try {
-                            if (!this._language || (this._language !== "JavaScript" && this._language !== "TypeScript"))
-                                throw new NoCliHandlerError_1.default("Invalid language specified");
-                            if (!this._options.client)
-                                throw new NoCliHandlerError_1.default("No client provided");
-                            this._options.client
-                                .setMaxListeners(Infinity)
-                                .on("ready", function (bot) { return (0, log_1.log)("NoCliHandler", "info", "Your bot ".concat(bot.user.tag, " is up and running")); });
-                            if (this._configuration.commandsDir) {
-                                commandHandlerInstance = new CommandHandler_1.default(this._configuration.commandsDir, this._language, this._debugging, this._defaultPrefix);
-                                commandHandlerInstance.messageListener(this._options.client);
-                            }
-                            else
-                                (0, log_1.log)("NoCliHandler", "warn", "No commands directory provided, you will have to handle the commands yourself");
-                            this._options.mongoDB !== undefined
-                                ? this.connectToMongoDB(this._options.mongoDB)
-                                : (0, log_1.log)("NoCliHandler", "warn", "No mongoURI provided");
+                        _a.label = 2;
+                    case 2:
+                        if (!this._language || (this._language !== "JavaScript" && this._language !== "TypeScript"))
+                            throw new NoCliHandlerError_1.default("Invalid language specified");
+                        if (!this._options.client)
+                            throw new NoCliHandlerError_1.default("No client provided");
+                        this._options.client
+                            .setMaxListeners(Infinity)
+                            .on("ready", function (bot) { return (0, log_1.log)("NoCliHandler", "info", "Your bot ".concat(bot.user.tag, " is up and running")); });
+                        if (this._configuration.commandsDir) {
+                            commandHandlerInstance = new CommandHandler_1.default(this._configuration.commandsDir, this._language, this._debugging, this._defaultPrefix);
+                            commandHandlerInstance.messageListener(this._options.client);
                         }
-                        catch (err) {
-                            error = err;
-                            showFullErrorLog = this._debugging !== undefined
-                                ? this._debugging.showFullErrorLog
-                                : false;
-                            (0, handleError_1.default)(error, showFullErrorLog);
-                        }
-                        return [2 /*return*/];
+                        else
+                            (0, log_1.log)("NoCliHandler", "warn", "No commands directory provided, you will have to handle the commands yourself");
+                        this._options.mongoDB !== undefined
+                            ? this.connectToMongoDB(this._options.mongoDB)
+                            : (0, log_1.log)("NoCliHandler", "warn", "No mongoURI provided");
+                        return [3 /*break*/, 4];
+                    case 3:
+                        err_1 = _a.sent();
+                        error = err_1;
+                        showFullErrorLog = this._debugging !== undefined
+                            ? this._debugging.showFullErrorLog
+                            : false;
+                        (0, handleError_1.default)(error, showFullErrorLog);
+                        return [3 /*break*/, 4];
+                    case 4: return [2 /*return*/];
                 }
             });
         });

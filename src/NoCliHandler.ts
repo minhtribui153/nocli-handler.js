@@ -9,7 +9,7 @@ import handleError from "./functions/handleError";
 
 class NoCliHandler {
     private _options: NoCliHandlerOptions;
-    private _version: string = '1.0.2-stable';
+    private _version: string = '1.0.3';
     private _configuration: NoCliHandlerOptions["configuration"];
     private _language: NoCliHandlerOptions["language"];
     private _debugging: NoCliHandlerOptions["debugging"];
@@ -29,9 +29,16 @@ class NoCliHandler {
     public get client(): NoCliHandlerOptions["client"] { return this._options.client }
 
     private async main() {
-        console.clear()
-        await showBanner("NoCliHandler.JS", this._version, "green", "red");
         try {
+            const showbanner = this._debugging !== undefined
+                ? this._debugging.showBanner !== undefined
+                    ? true
+                    : false
+                : false
+            if (showbanner) {
+                console.clear()
+                await showBanner("NoCliHandler.JS", this._version, "green", "red");
+            }
             if (!this._language || (this._language !== "JavaScript" && this._language !== "TypeScript")) throw new NoCliHandlerError("Invalid language specified");
             if (!this._options.client) throw new NoCliHandlerError("No client provided");
             this._options.client
