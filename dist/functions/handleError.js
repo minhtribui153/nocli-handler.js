@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var log_1 = require("./log");
-exports.default = (function (error, showFullErrorLog) {
-    var fullErrorLog = showFullErrorLog !== undefined
+const log_1 = require("./log");
+exports.default = (error, showFullErrorLog) => {
+    const fullErrorLog = showFullErrorLog !== undefined
         ? showFullErrorLog
             ? true
             : false
@@ -12,4 +12,4 @@ exports.default = (function (error, showFullErrorLog) {
     else
         (0, log_1.log)(error.name, "error", error.message);
     return process.exit(1);
-});
+};

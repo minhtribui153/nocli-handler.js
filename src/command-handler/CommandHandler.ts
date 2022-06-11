@@ -3,14 +3,17 @@ import { Client } from "discord.js";
 import { ICommand, NoCliHandlerOptions, NoCliLanguageType } from "../types";
 import { log } from "../functions/log";
 import getAllFiles from "../util/get-all-files";
+import NoCliHandler from "..";
 import Command from "./Command";
+import handleError from "../functions/handleError";
 
 // Validation imports
 import argumentCount from "./validations/run-time/argument-count";
+import testOnly from "./validations/run-time/test-only";
+
 import callbackRequired from "./validations/syntax/callback-required";
 import descriptionRequired from "./validations/syntax/description-required";
-import NoCliCommandError from "../errors/NoCliCommandError";
-import handleError from "../functions/handleError";
+import testWithoutServer from "./validations/syntax/test-without-server";
 
 
 class CommandHandler {
@@ -19,15 +22,17 @@ class CommandHandler {
 
     private _suffix: "js" | "ts";
     private _debugging: NoCliHandlerOptions["debugging"];
-    private _runTimeValidations = [argumentCount];
-    private _syntaxValidations = [callbackRequired, descriptionRequired];
     private _defaultPrefix: string;
+    private _instance: NoCliHandler;
+    private _runTimeValidations = [argumentCount, testOnly];
+    private _syntaxValidations = [callbackRequired, descriptionRequired, testWithoutServer];
 
-    constructor(commandsDir: string, language: NoCliLanguageType, debugging: NoCliHandlerOptions["debugging"], defaultPrefix: string) {
+    constructor(instance: NoCliHandler, commandsDir: string, language: NoCliLanguageType) {
         this.commandsDir = commandsDir;
         this._suffix = language === "TypeScript" ? "ts" : "js";
-        this._debugging = debugging;
-        this._defaultPrefix = defaultPrefix;
+        this._debugging = instance.debug;
+        this._defaultPrefix = instance.defaultPrefix;
+        this._instance = instance;
         this.readFiles()
     }
 
@@ -44,7 +49,7 @@ class CommandHandler {
                 ? require(file)
                 : await this.importFile(file);
 
-            const command = new Command(commandName, commandObject);
+            const command = new Command(this._instance, commandName, commandObject);
 
             try {
                 for (const validate of validations) validate(command);
@@ -85,7 +90,7 @@ class CommandHandler {
             const command = this.commands.get(commandName);
             if (!command) return;
 
-            const usage = { client, message, args, text: args.join(" ") }
+            const usage = { client, message, args, text: args.join(" "), guild: message.guild };
 
             for (const validation of validations) {
                 if (!validation(command, usage, prefix)) return;

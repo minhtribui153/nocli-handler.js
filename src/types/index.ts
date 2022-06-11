@@ -1,5 +1,5 @@
 
-import { Client, Message } from "discord.js";
+import { Client, Guild, Message } from "discord.js";
 import { ConnectOptions } from "mongoose";
 
 // NoCliHandler Reference:
@@ -27,6 +27,8 @@ export type NoCliHandlerOptions = {
         /** Whether or not to show the banner upon the start of the program  */
         showBanner?: boolean;
     };
+    /** The test servers testonly commands can only work in  */
+    testServers?: string[];
     /** The language you are using to develop your Discord.JS Bot  */
     language: NoCliLanguageType;
 }
@@ -54,6 +56,9 @@ export interface ICommand {
     correctSyntax?: string;
     /** The correct syntax on how the arguments should be in place. */
     usage?: string;
+    /** Whether the command is for test servers or not  */
+    testOnly?: boolean;
+    /** The function to execute when the command is called */
     callback: (options: CommandCallbackOptions) => void;
 }
 
@@ -66,4 +71,6 @@ export type CommandCallbackOptions = {
     args: string[];
     /** The arguments combined into a string */
     text: string;
+    /** The guild the command was ran from  */
+    guild: Guild | null;
 }

@@ -4,14 +4,14 @@
     <img src="./assets/Banner.png" width=500 />
   </p>
   <br />
-  <img src="https://nodei.co/npm/nocli-handler.js.png" />
+  <a href="https://www.npmjs.com/search?q=nocli-handler.js"><img src="https://nodei.co/npm/nocli-handler.js.png" /></a>
   <p></p>
 </div>
 
 # About
 <img src="./assets/Logo.png" width="100" align="right" />
 
-Imagine a handler, that takes your Discord.JS Bot to the next level. [nocli-handler.js](https://github.com/tribui141108/nocli-handler.js) is a next generation powerful Command Handler built for future Discord Bots running [Discord.JS](https://discord.js.org) with [MongoDB](https://mongodb.com) Support. It works just like a normal Discord.JS handler, but with plugins you can install and add to boost your Discord Bot. This package is under development, so expect a stable version at version 1.1.0.
+Imagine a handler, that takes your Discord.JS Bot to the next level. [nocli-handler.js](https://github.com/tribui141108/nocli-handler.js) is a next generation powerful Command Handler built for future Discord Bots running [Discord.JS](https://discord.js.org) with [MongoDB](https://mongodb.com) Support. It works just like a normal Discord.JS handler, but with plugins you can install and add to boost your Discord Bot.
 
 # Installation
 ```bash
@@ -87,6 +87,7 @@ const instance = new NoCliHandler({
         showFullErrorLog: false,               // Whether or not to show the full error log (default = false)
         showBanner: true,                      // Whether or not to show the banner upon the start of the program (default = true)
     },
+    testServers: [''],                         // Array of server IDs that will be used for testing (default = [])
     language: "TypeScript",                    // The language you are using to develop your Discord.JS Bot
 });
 
@@ -102,8 +103,9 @@ client.login('<bot_token>');
  */
 const Command = {
     minArgs: 0, // Optional: Default = 0
-    maxArgs: -1, // Optional: Default = -1 (Infinity),
+    maxArgs: -1, // Optional: Default = -1 (no limit),
     description: "<command_description>",
+    testOnly: false, // Optional: Default = false
     callback: ({ client, message, args }) => {}
 }
 
@@ -114,9 +116,10 @@ module.exports = Command;
 import { ICommand } from 'nocli-handler.js';
 
 export default {
-    minArgs: 0, // Optional: Default = 0
-    maxArgs: -1, // Optional: Default = -1 (Infinity),
+    minArgs: 0,                                 // Optional: Default = 0
+    maxArgs: -1,                                // Optional: Default = -1 (no limit),
     description: "<command_description>",
+    testOnly: false,                            // Optional: Default = false
     callback: ({ client, message, args }) => {}
 } as ICommand;
 ```

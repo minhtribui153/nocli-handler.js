@@ -1,3 +1,6 @@
+export * from './functions/log';
+export * from "./types";
+
 import CommandHandler from "./command-handler/CommandHandler";
 import NoCliHandlerError from "./errors/NoCliHandlerError";
 import mongoose from 'mongoose';
@@ -10,9 +13,11 @@ import handleError from "./functions/handleError";
 class NoCliHandler {
     private _options: NoCliHandlerOptions;
     private _version: string = '1.0.3';
+    private _testServers: string[] = [];
     private _configuration: NoCliHandlerOptions["configuration"];
     private _language: NoCliHandlerOptions["language"];
     private _debugging: NoCliHandlerOptions["debugging"];
+    private _showBanner: boolean = true;
     private _defaultPrefix: string = "!";
     
     
@@ -21,21 +26,21 @@ class NoCliHandler {
         this._configuration = options.configuration;
         this._debugging = options.debugging;
         this._language = options.language;
+        if (this._options.testServers) this._testServers = this._options.testServers;
         if (this._configuration.defaultPrefix) this._defaultPrefix = this._configuration.defaultPrefix;
+        if (this._debugging && this._debugging.showBanner !== undefined) this._showBanner = this._debugging.showBanner;
         
         this.main();
     }
     
     public get client(): NoCliHandlerOptions["client"] { return this._options.client }
+    public get testServers(): string[] { return this._testServers }
+    public get defaultPrefix(): string { return this._defaultPrefix }
+    public get debug() { return this._debugging }
 
     private async main() {
         try {
-            const showbanner = this._debugging !== undefined
-                ? this._debugging.showBanner !== undefined
-                    ? true
-                    : false
-                : false
-            if (showbanner) {
+            if (this._showBanner) {
                 console.clear()
                 await showBanner("NoCliHandler.JS", this._version, "green", "red");
             }
@@ -46,7 +51,7 @@ class NoCliHandler {
                 .on("ready", bot => log("NoCliHandler", "info", `Your bot ${bot.user.tag} is up and running`));
 
             if (this._configuration.commandsDir) {
-                const commandHandlerInstance = new CommandHandler(this._configuration.commandsDir, this._language, this._debugging, this._defaultPrefix);
+                const commandHandlerInstance = new CommandHandler(this, this._configuration.commandsDir, this._language);
                 commandHandlerInstance.messageListener(this._options.client);
             } else log("NoCliHandler", "warn", "No commands directory provided, you will have to handle the commands yourself");
             

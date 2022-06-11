@@ -1,8 +1,11 @@
 import { ICommand } from '../types';
+import NoCliHandler from '..';
 declare class Command {
     private _commandName;
     private _commandObject;
-    constructor(commandName: string, commandObject: ICommand);
+    private _instance;
+    constructor(instance: NoCliHandler, commandName: string, commandObject: ICommand);
+    get instance(): NoCliHandler;
     get commandName(): string;
     get commandObject(): ICommand;
 }
