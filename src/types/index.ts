@@ -1,4 +1,3 @@
-
 import { Client, Guild, Message } from "discord.js";
 import { ConnectOptions } from "mongoose";
 
