@@ -1,5 +1,3 @@
-![Image](https://raw.githubusercontent.com/tribui141108/nocli-handler.js/master/assets/Banner.png)
-
 <div align="center">
   <br />
   <p>
