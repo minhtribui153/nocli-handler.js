@@ -1,27 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -29,13 +6,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const log_1 = require("../functions/log");
 const get_all_files_1 = __importDefault(require("../util/get-all-files"));
 const Command_1 = __importDefault(require("./Command"));
-const handleError_1 = __importDefault(require("../functions/handleError"));
-// Validation imports
-const argument_count_1 = __importDefault(require("./validations/run-time/argument-count"));
-const test_only_1 = __importDefault(require("./validations/run-time/test-only"));
-const callback_required_1 = __importDefault(require("./validations/syntax/callback-required"));
-const description_required_1 = __importDefault(require("./validations/syntax/description-required"));
-const test_without_server_1 = __importDefault(require("./validations/syntax/test-without-server"));
+const handle_error_1 = __importDefault(require("../functions/handle-error"));
+const SlashCommands_1 = __importDefault(require("./SlashCommands"));
+const path_1 = __importDefault(require("path"));
+const import_file_1 = __importDefault(require("../util/import-file"));
 class CommandHandler {
     commands = new Map();
     commandsDir;
@@ -43,18 +17,26 @@ class CommandHandler {
     _debugging;
     _defaultPrefix;
     _instance;
-    _runTimeValidations = [argument_count_1.default, test_only_1.default];
-    _syntaxValidations = [callback_required_1.default, description_required_1.default, test_without_server_1.default];
+    _slashCommands;
+    _validations = this.getValidations('run-time');
     constructor(instance, commandsDir, language) {
         this.commandsDir = commandsDir;
         this._suffix = language === "TypeScript" ? "ts" : "js";
         this._debugging = instance.debug;
         this._defaultPrefix = instance.defaultPrefix;
         this._instance = instance;
+        this._slashCommands = new SlashCommands_1.default(instance.client, this._debugging ? this._debugging.showFullErrorLog : undefined);
         this.readFiles();
+        this.messageListener(instance.client);
+        this.interactionListener(instance.client);
+    }
+    getValidations(folder) {
+        const validations = (0, get_all_files_1.default)(path_1.default.join(__dirname, `./validations/${folder}`))
+            .map(filePath => (0, import_file_1.default)(filePath).then((file) => file));
+        return validations;
     }
     async readFiles() {
-        const validations = this._syntaxValidations;
+        const validations = this.getValidations('syntax');
         const files = (0, get_all_files_1.default)(this.commandsDir);
         for (const file of files) {
             const commandProperty = file.split(/[/\\]/).pop().split(".");
@@ -62,54 +44,129 @@ class CommandHandler {
             const commandSuffix = commandProperty[1];
             if (commandSuffix !== this._suffix)
                 continue;
-            const commandObject = this._suffix === "js"
-                ? require(file)
-                : await this.importFile(file);
-            const command = new Command_1.default(this._instance, commandName, commandObject);
             try {
-                for (const validate of validations)
-                    validate(command);
+                const commandObject = this._suffix === "js"
+                    ? require(file)
+                    : await (0, import_file_1.default)(file);
+                const { slash, testOnly, description, delete: del } = commandObject;
+                if (del) {
+                    if (testOnly) {
+                        for (const guildId of this._instance.testServers) {
+                            this._slashCommands.delete(commandName, guildId);
+                        }
+                    }
+                    else {
+                        this._slashCommands.delete(commandName);
+                    }
+                    continue;
+                }
+                ;
+                const command = new Command_1.default(this._instance, commandName, commandObject);
+                for (const validation of validations) {
+                    validation
+                        .then((validate) => validate(command))
+                        .catch(err => {
+                        const error = err;
+                        const showFullErrorLog = this._debugging !== undefined
+                            ? this._debugging.showFullErrorLog
+                            : false;
+                        (0, handle_error_1.default)(error, showFullErrorLog);
+                    });
+                }
+                ;
+                if (slash === true || slash === 'both') {
+                    const options = commandObject.options || this._slashCommands.createOptions(commandObject);
+                    if (testOnly === true) {
+                        for (const guildId of this._instance.testServers) {
+                            this._slashCommands.create(commandName, description, options ?? [], guildId);
+                        }
+                    }
+                    else {
+                        this._slashCommands.create(commandName, description, options ?? []);
+                    }
+                    if (slash !== true) {
+                        this.commands.set(command.commandName, command);
+                    }
+                }
+                this.commands.set(command.commandName, command);
             }
             catch (err) {
                 const error = err;
                 const showFullErrorLog = this._debugging !== undefined
                     ? this._debugging.showFullErrorLog
                     : false;
-                (0, handleError_1.default)(error, showFullErrorLog);
+                (0, handle_error_1.default)(error, showFullErrorLog);
             }
-            this.commands.set(command.commandName, command);
         }
         const noCommands = this.commands.size === 0;
         const isOneOnly = this.commands.size === 1;
         (0, log_1.log)("NoCliHandler", "info", noCommands ? "No commands found" : `Loaded ${this.commands.size} command${isOneOnly ? "" : "s"}`);
     }
-    async importFile(filePath) {
-        const file = await (Promise.resolve().then(() => __importStar(require(filePath))));
-        return file?.default;
+    async runCommand(commandName, args, message, interaction) {
+        const command = this.commands.get(commandName);
+        if (!command)
+            return;
+        const usage = {
+            client: this._instance.client,
+            message,
+            interaction,
+            args,
+            text: args.join(" "),
+            guild: message ? message.guild : interaction.guild,
+        };
+        if (message && command.commandObject.slash === true)
+            return;
+        for (const validation of this._validations) {
+            const valid = validation
+                .then(validate => validate(command, usage, message ? this._defaultPrefix : '/'))
+                .catch(err => {
+                const error = err;
+                const showFullErrorLog = this._debugging !== undefined
+                    ? this._debugging.showFullErrorLog
+                    : false;
+                (0, handle_error_1.default)(error, showFullErrorLog);
+            });
+            if (!valid)
+                return;
+        }
+        try {
+            const { callback } = command.commandObject;
+            return await callback(usage);
+        }
+        catch (err) {
+            const error = err;
+            const showFullErrorLog = this._debugging !== undefined
+                ? this._debugging.showFullErrorLog
+                : false;
+            (0, handle_error_1.default)(error, showFullErrorLog);
+        }
     }
     async messageListener(client) {
-        const prefix = this._defaultPrefix;
-        const validations = this._runTimeValidations;
-        client.on("messageCreate", (message) => {
+        client.on("messageCreate", async (message) => {
             const { author, content } = message;
             if (author.bot)
                 return;
-            if (!content.startsWith(prefix))
+            if (!content.startsWith(this._defaultPrefix))
                 return;
             const args = content.split(/\s+/);
-            const commandName = args.shift()?.substring(1).toLowerCase();
+            const commandName = args.shift()
+                ?.substring(this._defaultPrefix.length)
+                .toLowerCase();
             if (!commandName)
                 return;
-            const command = this.commands.get(commandName);
-            if (!command)
+            const response = await this.runCommand(commandName, args, message, null);
+            if (response)
+                message.reply(response).catch(() => { });
+        });
+    }
+    async interactionListener(client) {
+        client.on("interactionCreate", async (interaction) => {
+            if (!interaction.isCommand())
                 return;
-            const usage = { client, message, args, text: args.join(" "), guild: message.guild };
-            for (const validation of validations) {
-                if (!validation(command, usage, prefix))
-                    return;
-            }
-            const { callback } = command.commandObject;
-            callback(usage);
+            const args = interaction.options.data.map(({ value }) => String(value));
+            const response = await this.runCommand(interaction.commandName, args, null, interaction);
+            if (response)
+                interaction.reply(response).catch(() => { });
         });
     }
 }

@@ -1,5 +1,6 @@
-import { Client, Guild, Message } from "discord.js";
+import { ApplicationCommandOptionData, Client, CommandInteraction, Guild, Message } from "discord.js";
 import { ConnectOptions } from "mongoose";
+import Command from "../command-handler/Command";
 
 // NoCliHandler Reference:
 export type NoCliHandlerOptions = {
@@ -26,17 +27,43 @@ export type NoCliHandlerOptions = {
         /** Whether or not to show the banner upon the start of the program  */
         showBanner?: boolean;
     };
-    /** The test servers testonly commands can only work in  */
+    /** The test guilds testonly commands can only work in  */
     testServers?: string[];
     /** The language you are using to develop your Discord.JS Bot  */
     language: NoCliLanguageType;
+    /**
+     * Your Discord.JS Client Version.
+     * Pass the version of your Discord.JS Client like this:
+     * #### TypeScript
+     * ```typescript
+     * import DiscordJS from 'discord.js';
+     * ...
+     * clientVersion: DiscordJS.version,
+     * ...
+     * ```
+     * 
+     * #### JavaScript
+     * ```javascript
+     * const DiscordJS = require('discord.js');
+     * ...
+     * clientVersion: DiscordJS.version,
+     * ...
+     * ```
+     */
+    clientVersion: string;
 }
+export type NoCliRuntimeValidationType = (command: Command, usage: CommandCallbackOptions, prefix: string) => boolean;
+export type NoCliSyntaxValidationType = (command: Command) => void;
 
 export type NoCliEnvironmentType = "PRODUCTION" | "DEVELOPMENT" | "TESTING";
 export type NoCliLanguageType = "TypeScript" | "JavaScript";
 
 // Command Reference:
 export interface ICommand {
+    /** Whether the command is slash command, legacy command, or both */
+    slash?: NoCliIsSlash;
+    /** Tells the command handler whether to disable this command from interaction with the guilds */
+    delete?: boolean;
     /** The description of the command */
     description: string;
     /** The minimum amount of arguments for the command */
@@ -54,22 +81,32 @@ export interface ICommand {
      */
     correctSyntax?: string;
     /** The correct syntax on how the arguments should be in place. */
-    usage?: string;
-    /** Whether the command is for test servers or not  */
+    expectedArgs?: string;
+    /** Whether the command is for test guilds or not  */
     testOnly?: boolean;
+    /** 
+     * The Discord.JS arguments (only works for Slash Commands)
+     * Specify this if you are used to handle Discord.JS arguments with Slash Commands.
+     */
+    options?: ApplicationCommandOptionData[];
     /** The function to execute when the command is called */
-    callback: (options: CommandCallbackOptions) => void;
+    callback: (options: CommandCallbackOptions) => any;
 }
 
 export type CommandCallbackOptions = {
     /** The Discord.JS Client Instance */
     client: Client;
     /** The Discord.JS Message Instance */
-    message: Message;
+    message: Message | null;
+    /** The Discord.JS CommandInteraction Instance  */
+    interaction: CommandInteraction | null;
     /** The arguments passed to the command */
     args: string[];
     /** The arguments combined into a string */
     text: string;
     /** The guild the command was ran from  */
     guild: Guild | null;
+
 }
+
+export type NoCliIsSlash = boolean | "both";

@@ -5,12 +5,21 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.log = void 0;
 const chalk_1 = __importDefault(require("chalk"));
+const handleColorType = (type) => {
+    switch (type) {
+        case 'info':
+            return "blue";
+        case 'warn':
+            return "yellow";
+        case 'error':
+            return "red";
+    }
+};
 const log = (name, type, ...args) => {
-    if (type === "error")
-        return console.log(chalk_1.default["red"](`[${name}]`), args.join(" "));
-    else if (type === "warn")
-        return console.log(chalk_1.default["yellow"](`[${name}]`), args.join(" "));
-    else
-        return console.log(chalk_1.default["blue"](`[${name}]`), args.join(" "));
+    const time = new Date().toLocaleTimeString();
+    const color = handleColorType(type);
+    const infoType = `[${name}]`;
+    const timeType = `[${time}]`;
+    return console.log(chalk_1.default.bold["grey"](timeType) + chalk_1.default.bold[color](infoType), args.join(" "));
 };
 exports.log = log;
