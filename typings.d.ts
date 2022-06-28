@@ -1,4 +1,4 @@
-import { ApplicationCommand, ApplicationCommandOptionData, Client, ClientApplication, Guild, Message } from 'discord.js';
+import { ApplicationCommand, ApplicationCommandOption, ApplicationCommandOptionData, Client, ClientApplication, Guild, Message } from 'discord.js';
 import mongoose, { ConnectOptions } from 'mongoose';
 import showBanner from 'node-banner';
 import chalk from 'chalk';
@@ -79,6 +79,13 @@ export class SlashCommands {
     getCommands(guildId?: string): ClientApplication["commands"];
 
     /**
+     * Checks if the new slash command option and the old one are different
+     * @param {ApplicationCommandOption[]} existingOptions The current slash command options.
+     * @param {ApplicationCommandOptionData[]} options The new slash command options.
+     */
+    optionsAreDifferent(existingOptions: ApplicationCommandOption[], options: ApplicationCommandOptionData[]): boolean
+
+    /**
      * Creates a new Slash Command
      * @param {string}  name The name of the command
      * @param {string} description The description of the command
@@ -87,7 +94,11 @@ export class SlashCommands {
      */
      async create(name: string, description: string, options: ApplicationCommandOptionData[], guildId?: string): Promise<ApplicationCommand<{}> | undefined>;
 
+    /** Creates command options from expectedArgs */
     createOptions({ expectedArgs = '', minArgs = 0 }: ICommand): ApplicationCommandOptionData[];
+
+    /** Re-edits the options if they do not follow the Slash Command format */
+    reEditOptions(commandName: string, options: ApplicationCommandOptionData[]): ApplicationCommandOptionData[]
 }
 
 // src/NoCliCommandError.ts
@@ -142,6 +153,8 @@ export type NoCliHandlerOptions = {
         commandsDir?: string;
         /** The directory where the features are stored */
         featuresDir?: string;
+        /** The array of Discord ID of bot owners */
+        botOwners?: string[];
     };
     /** The Environment Configuration  */
     debugging?: {
@@ -152,6 +165,8 @@ export type NoCliHandlerOptions = {
     };
     /** The test guilds testonly commands can only work in  */
     testServers?: string[];
+    /** The array of Discord ID of bot owners */
+    botOwners?: string[];
     /** The language you are using to develop your Discord.JS Bot  */
     language: NoCliLanguageType;
     /**
@@ -187,6 +202,8 @@ export interface ICommand {
     slash?: NoCliIsSlash;
     /** Tells the command handler whether to disable this command from interaction with the guilds */
     delete?: boolean;
+    /** Runs events inside a command */
+    init?: (client: Client) => void;
     /** The description of the command */
     description: string;
     /** The minimum amount of arguments for the command */
@@ -217,6 +234,10 @@ export interface ICommand {
     expectedArgs?: string;
     /** Whether the command is for test guilds or not  */
     testOnly?: boolean;
+    /** Whether the command only works only in guilds  */
+    guildOnly?: boolean;
+    /** Whether the command is only allowed for bot owners  */
+    ownerOnly?: boolean;
     /** 
      * The Discord.JS arguments (only works for Slash Commands).
      * Specify this if you are used to handle Discord.JS arguments with Slash Commands.
@@ -225,6 +246,8 @@ export interface ICommand {
     options?: ApplicationCommandOptionData[];
     /** The function to execute when the command is called */
     callback: (options: CommandCallbackOptions) => any;
+    /** Short-form commands */
+    aliases?: string[];
 }
 
 export type CommandCallbackOptions = {

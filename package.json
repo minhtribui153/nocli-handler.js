@@ -1,6 +1,6 @@
 {
   "name": "nocli-handler.js",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Next generation Discord.JS Handler for future Discord Bots",
   "main": "./dist/index.js",
   "typings": "./typings.d.ts",

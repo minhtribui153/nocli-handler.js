@@ -1,6 +1,6 @@
 // Default import
-import { Client, CommandInteraction, Message, InteractionReplyOptions } from "discord.js";
-import { ICommand, NoCliHandlerOptions, NoCliLanguageType, NoCliRuntimeValidationType, NoCliSyntaxValidationType } from "../types";
+import { Client, CommandInteraction, Message, InteractionReplyOptions, GuildMember } from "discord.js";
+import { CommandCallbackOptions, ICommand, NoCliHandlerOptions, NoCliLanguageType, NoCliRuntimeValidationType, NoCliSyntaxValidationType } from "../types";
 import { log } from "../functions/log";
 import getAllFiles from "../util/get-all-files";
 import NoCliHandler from "..";
@@ -58,7 +58,7 @@ class CommandHandler {
                     ? require(file) as ICommand
                     : await importFile<ICommand>(file);
 
-                const { slash, testOnly, description, delete: del } = commandObject;
+                const { slash, testOnly, description, delete: del, aliases = [] } = commandObject;
 
                 if (del) {
                     if (testOnly) {
@@ -95,23 +95,24 @@ class CommandHandler {
                         for (const guildId of this._instance.testServers) {
                             this._slashCommands.create(commandName, description, options ?? [], guildId);
                         }
-                    } else {
-                        this._slashCommands.create(commandName, description, options ?? []);
-                    }
+                    } else this._slashCommands.create(commandName, description, options ?? []);
 
                     if (slash !== true) {
-                        this.commands.set(command.commandName, command);
-                    }
+                        const names = [command.commandName, ...aliases];
+                        
+                        for (const name of names) {
+                            this.commands.set(name, command);
+                        }
+                    };
                 }
                 
                 this.commands.set(command.commandName, command);
             } catch (err) {
-                const error = err as any;
-                const showFullErrorLog = this._debugging !== undefined
+                const showFullErrorLog = this._debugging
                     ? this._debugging.showFullErrorLog
                     : false;
 
-                handleError(error, showFullErrorLog);
+                handleError(err, showFullErrorLog);
             }
         }
         const noCommands = this.commands.size === 0;
@@ -124,28 +125,21 @@ class CommandHandler {
         const command = this.commands.get(commandName);
             if (!command) return;
 
-            const usage = {
+            const usage: CommandCallbackOptions = {
                 client: this._instance.client,
                 message,
                 interaction,
                 args,
                 text: args.join(" "),
                 guild: message ? message.guild : interaction!.guild,
+                member: message ? message.member : interaction!.member as GuildMember,
+                user: message ? message.author : interaction!.user,
             };
 
             if (message && command.commandObject.slash === true) return;
 
             for (const validation of this._validations) {
-                const valid = validation
-                    .then(validate => validate(command, usage, message ? this._defaultPrefix : '/'))
-                    .catch(err => {
-                        const error = err as any;
-                        const showFullErrorLog = this._debugging !== undefined
-                            ? this._debugging.showFullErrorLog
-                            : false;
-
-                        handleError(error, showFullErrorLog);
-                    });
+                const valid = await validation.then(validate => validate(command, usage, message ? this._defaultPrefix : '/'));
                 if (!valid) return;
             }
 
@@ -154,12 +148,8 @@ class CommandHandler {
     
                 return await callback(usage);
             } catch (err) {
-                const error = err as any;
-                const showFullErrorLog = this._debugging !== undefined
-                    ? this._debugging.showFullErrorLog
-                    : false;
-
-                handleError(error, showFullErrorLog);
+                const showFullErrorLog = this._debugging ? this._debugging.showFullErrorLog : false;
+                handleError(err as any, showFullErrorLog);
             }
     }
 

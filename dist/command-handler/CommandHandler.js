@@ -48,7 +48,7 @@ class CommandHandler {
                 const commandObject = this._suffix === "js"
                     ? require(file)
                     : await (0, import_file_1.default)(file);
-                const { slash, testOnly, description, delete: del } = commandObject;
+                const { slash, testOnly, description, delete: del, aliases = [] } = commandObject;
                 if (del) {
                     if (testOnly) {
                         for (const guildId of this._instance.testServers) {
@@ -81,21 +81,23 @@ class CommandHandler {
                             this._slashCommands.create(commandName, description, options ?? [], guildId);
                         }
                     }
-                    else {
+                    else
                         this._slashCommands.create(commandName, description, options ?? []);
-                    }
                     if (slash !== true) {
-                        this.commands.set(command.commandName, command);
+                        const names = [command.commandName, ...aliases];
+                        for (const name of names) {
+                            this.commands.set(name, command);
+                        }
                     }
+                    ;
                 }
                 this.commands.set(command.commandName, command);
             }
             catch (err) {
-                const error = err;
-                const showFullErrorLog = this._debugging !== undefined
+                const showFullErrorLog = this._debugging
                     ? this._debugging.showFullErrorLog
                     : false;
-                (0, handle_error_1.default)(error, showFullErrorLog);
+                (0, handle_error_1.default)(err, showFullErrorLog);
             }
         }
         const noCommands = this.commands.size === 0;
@@ -113,19 +115,13 @@ class CommandHandler {
             args,
             text: args.join(" "),
             guild: message ? message.guild : interaction.guild,
+            member: message ? message.member : interaction.member,
+            user: message ? message.author : interaction.user,
         };
         if (message && command.commandObject.slash === true)
             return;
         for (const validation of this._validations) {
-            const valid = validation
-                .then(validate => validate(command, usage, message ? this._defaultPrefix : '/'))
-                .catch(err => {
-                const error = err;
-                const showFullErrorLog = this._debugging !== undefined
-                    ? this._debugging.showFullErrorLog
-                    : false;
-                (0, handle_error_1.default)(error, showFullErrorLog);
-            });
+            const valid = await validation.then(validate => validate(command, usage, message ? this._defaultPrefix : '/'));
             if (!valid)
                 return;
         }
@@ -134,11 +130,8 @@ class CommandHandler {
             return await callback(usage);
         }
         catch (err) {
-            const error = err;
-            const showFullErrorLog = this._debugging !== undefined
-                ? this._debugging.showFullErrorLog
-                : false;
-            (0, handle_error_1.default)(error, showFullErrorLog);
+            const showFullErrorLog = this._debugging ? this._debugging.showFullErrorLog : false;
+            (0, handle_error_1.default)(err, showFullErrorLog);
         }
     }
     async messageListener(client) {

@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionData, Client, CommandInteraction, Guild, Message } from "discord.js";
+import { ApplicationCommandOptionData, Client, CommandInteraction, Guild, GuildMember, Message, User } from "discord.js";
 import { ConnectOptions } from "mongoose";
 import Command from "../command-handler/Command";
 
@@ -29,6 +29,8 @@ export type NoCliHandlerOptions = {
     };
     /** The test guilds testonly commands can only work in  */
     testServers?: string[];
+    /** The array of Discord ID of bot owners */
+    botOwners?: string[];
     /** The language you are using to develop your Discord.JS Bot  */
     language: NoCliLanguageType;
     /**
@@ -64,6 +66,8 @@ export interface ICommand {
     slash?: NoCliIsSlash;
     /** Tells the command handler whether to disable this command from interaction with the guilds */
     delete?: boolean;
+    /** Runs events inside a command */
+    init?: (client: Client) => void;
     /** The description of the command */
     description: string;
     /** The minimum amount of arguments for the command */
@@ -82,8 +86,12 @@ export interface ICommand {
     correctSyntax?: string;
     /** The correct syntax on how the arguments should be in place. */
     expectedArgs?: string;
-    /** Whether the command is for test guilds or not  */
+    /** Whether the command is for test guilds  */
     testOnly?: boolean;
+    /** Whether the command only works only in guilds  */
+    guildOnly?: boolean;
+    /** Whether the command is only allowed for bot owners  */
+    ownerOnly?: boolean;
     /** 
      * The Discord.JS arguments (only works for Slash Commands)
      * Specify this if you are used to handle Discord.JS arguments with Slash Commands.
@@ -91,6 +99,8 @@ export interface ICommand {
     options?: ApplicationCommandOptionData[];
     /** The function to execute when the command is called */
     callback: (options: CommandCallbackOptions) => any;
+    /** Short-form commands */
+    aliases?: string[];
 }
 
 export type CommandCallbackOptions = {
@@ -106,7 +116,10 @@ export type CommandCallbackOptions = {
     text: string;
     /** The guild the command was ran from  */
     guild: Guild | null;
-
+    /** The guild member who ran this command */
+    member: GuildMember | null;
+    /** The user who ran this command */
+    user: User;
 }
 
 export type NoCliIsSlash = boolean | "both";

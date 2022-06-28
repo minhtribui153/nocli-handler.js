@@ -1,9 +1,7 @@
-![Image](https://raw.githubusercontent.com/tribui141108/nocli-handler.js/master/assets/Banner.png)
-
 <div align="center">
   <br />
   <p>
-    <img src="https://raw.githubusercontent.com/tribui141108/nocli-handler.js/master/assets/Banner.png" width=1000px />
+    <img src="https://raw.githubusercontent.com/tribui141108/nocli-handler.js/master/assets/Banner.png" width=350px />
   </p>
   <br />
   <a href="https://www.npmjs.com/search?q=nocli-handler.js"><img src="https://nodei.co/npm/nocli-handler.js.png" /></a>

@@ -42,6 +42,7 @@ class NoCliHandler {
     _options;
     _version = 'v1.0.33';
     _testServers = [];
+    _botOwners = [];
     _configuration;
     _language;
     _debugging;
@@ -57,6 +58,8 @@ class NoCliHandler {
         this._clientVersion = options.clientVersion;
         if (this._options.testServers)
             this._testServers = this._options.testServers;
+        if (this._options.botOwners)
+            this._botOwners = this._options.botOwners;
         if (this._configuration.defaultPrefix)
             this._defaultPrefix = this._configuration.defaultPrefix;
         if (this._debugging && this._debugging.showBanner !== undefined)
@@ -97,6 +100,7 @@ class NoCliHandler {
     }
     get client() { return this._options.client; }
     get testServers() { return this._testServers; }
+    get botOwners() { return this._botOwners; }
     get defaultPrefix() { return this._defaultPrefix; }
     get debug() { return this._debugging; }
     get commands() { return this._commands; }

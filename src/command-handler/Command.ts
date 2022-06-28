@@ -10,6 +10,10 @@ class Command {
         this._commandName = commandName.toLowerCase();
         this._commandObject = commandObject;
         this._instance = instance;
+
+        commandObject.init
+            ? commandObject.init(this._instance.client)
+            : null;
     }
 
     get instance(): NoCliHandler { return this._instance }
