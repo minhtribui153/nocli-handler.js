@@ -1,11 +1,13 @@
 {
   "name": "nocli-handler.js",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Next generation Discord.JS Handler for future Discord Bots",
   "main": "./dist/index.js",
   "typings": "./typings.d.ts",
   "scripts": {
-    "tsc": "npx tsc -w --outDir dist --rootDir src --skipLibCheck"
+    "build": "npx tsc",
+    "build:watch": "npx tsc -w --outDir dist --rootDir src --skipLibCheck",
+    "zip": "zip -r \"Source Code.zip\" . * -x node_modules/* @"
   },
   "repository": {
     "type": "git",
@@ -18,7 +20,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "chalk": "^2.4.1",
-    "discord.js": "^13.8.0",
+    "discord.js": "^13.8.1",
     "mongoose": "^6.3.5",
     "node-banner": "^1.4.0"
   },

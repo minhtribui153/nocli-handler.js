@@ -1,4 +1,4 @@
-import { ApplicationCommand, ApplicationCommandOption, ApplicationCommandOptionData, Client, ClientApplication, Guild, Message } from 'discord.js';
+import { ApplicationCommand, ApplicationCommandOption, ApplicationCommandOptionData, GuildMember, Client, ClientApplication, Guild, Message, AnyChannel, TextBasedChannel } from 'discord.js';
 import mongoose, { ConnectOptions } from 'mongoose';
 import showBanner from 'node-banner';
 import chalk from 'chalk';
@@ -96,9 +96,6 @@ export class SlashCommands {
 
     /** Creates command options from expectedArgs */
     createOptions({ expectedArgs = '', minArgs = 0 }: ICommand): ApplicationCommandOptionData[];
-
-    /** Re-edits the options if they do not follow the Slash Command format */
-    reEditOptions(commandName: string, options: ApplicationCommandOptionData[]): ApplicationCommandOptionData[]
 }
 
 // src/NoCliCommandError.ts
@@ -122,6 +119,17 @@ const isCorrectVersion = (version: string): boolean => {};
 export type NoCliLogType = 'info' | 'warn' | 'error';
 
 type NoCliLogColorType = "red" | "blue" | "yellow";
+
+export type ICommandOptionType =
+| "STRING"
+| "INTEGER"
+| "BOOLEAN"
+| "USER"
+| "CHANNEL"
+| "ROLE"
+| "MENTIONABLE"
+| "NUMBER"
+| "ATTACHMENT"
 
 const handleColorType = (type: NoCliLogType): NoCliLogColorType => {};
 export const log = (name: string, type: NoCliLogType, ...args: string[]) => {};
@@ -198,8 +206,8 @@ export type NoCliLanguageType = "TypeScript" | "JavaScript";
 
 // Command Reference:
 export interface ICommand {
-    /** Whether the command is slash command, legacy command, or both */
-    slash?: NoCliIsSlash;
+    /** Sets the command type */
+    type: NoCliCommandType;
     /** Tells the command handler whether to disable this command from interaction with the guilds */
     delete?: boolean;
     /** Runs events inside a command */
@@ -232,12 +240,22 @@ export interface ICommand {
      * **However, you still have to specify these annotations as it is required and can help you understand what your arguments are supposed to be.**
      */
     expectedArgs?: string;
+    /** Defines the Slash Command option property for each argument in expectedArgs */
+    expectedArgsTypes?: ApplicationCommandNonOptionsData[];
     /** Whether the command is for test guilds or not  */
     testOnly?: boolean;
     /** Whether the command only works only in guilds  */
     guildOnly?: boolean;
     /** Whether the command is only allowed for bot owners  */
     ownerOnly?: boolean;
+    /** Tells the command handler whether to delay interaction reply when any value is returned from the command */
+    deferReply?: boolean;
+    /** 
+     * Tells the command handler whether to make interaction reply ephemeral when any value is returned from the command.
+     * 
+     * **IMPORTANT: This option will only be ignored if you return a value as an `Object` for a normal interaction reply**
+    */
+    ephemeralReply?: boolean;
     /** 
      * The Discord.JS arguments (only works for Slash Commands).
      * Specify this if you are used to handle Discord.JS arguments with Slash Commands.
@@ -263,10 +281,15 @@ export type CommandCallbackOptions = {
     text: string;
     /** The guild the command was ran from  */
     guild: Guild | null;
-
+    /** The guild member who ran this command */
+    member: GuildMember | null;
+    /** The user who ran this command */
+    user: User;
+    /** The channel the command was ran from */
+    channel: AnyChannel | TextBasedChannel | null;
 }
 
-export type NoCliIsSlash = boolean | "both";
+export type NoCliCommandType = "SLASH" | "LEGACY" | "BOTH";
 
 // src/util/get-all-files.ts
 function getAllFiles(path: string): string[];

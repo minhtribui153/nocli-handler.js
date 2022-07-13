@@ -1,5 +1,6 @@
 import { ICommand } from '../types';
 import NoCliHandler from '..';
+import handleError from '../functions/handle-error';
 
 class Command {
     private _commandName: string;
@@ -11,9 +12,14 @@ class Command {
         this._commandObject = commandObject;
         this._instance = instance;
 
-        commandObject.init
-            ? commandObject.init(this._instance.client)
-            : null;
+        try {
+            commandObject.init
+                ? commandObject.init(this._instance.client)
+                : null;
+        } catch (err) {
+            const showFullErrorLog = this._instance.debug ? this._instance.debug.showFullErrorLog : false;
+            handleError(err, showFullErrorLog, this._commandName);
+        }
     }
 
     get instance(): NoCliHandler { return this._instance }

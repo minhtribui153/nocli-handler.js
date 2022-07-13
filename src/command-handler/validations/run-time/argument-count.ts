@@ -4,7 +4,7 @@ import Command from "../../Command";
 export default (command: Command, usage: CommandCallbackOptions, prefix: string) => {
     const { minArgs = 0, maxArgs = -1, correctSyntax, expectedArgs = "" } = command.commandObject;
     const { length } = usage.args;
-
+    
     if ((length < minArgs) || (length > maxArgs && maxArgs !== -1)) {
         let text = `Invalid Syntax! Correct Syntax: \`${prefix}${command.commandName} ${expectedArgs}\``
             .replace("[PREFIX]", prefix)

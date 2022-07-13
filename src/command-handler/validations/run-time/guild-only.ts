@@ -2,10 +2,10 @@ import { CommandCallbackOptions } from "../../../types";
 import Command from "../../Command";
 
 export default (command: Command, usage: CommandCallbackOptions, prefix: string) => {
-    const { commandObject } = command;
+    const { guildOnly } = command.commandObject;
     const { guild, message, interaction } = usage;
 
-    if (commandObject.guildOnly && !guild) {
+    if (guildOnly && !guild) {
         const text = "This command can only be ran within a server.";
 
         if (message) message.reply(text);

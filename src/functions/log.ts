@@ -20,5 +20,6 @@ export const log = (name: string, type: NoCliLogType, ...args: string[]) => {
     const color = handleColorType(type);
     const infoType = `[${name}]`;
     const timeType = `[${time}]`;
-    return console.log(chalk.bold["grey"](timeType) + chalk.bold[color](infoType), args.join(" "));
+    console.log(chalk.bold["grey"](timeType) + chalk.bold[color](infoType), args.join(" "))
+    return;
 }

@@ -48,7 +48,7 @@ class CommandHandler {
                 const commandObject = this._suffix === "js"
                     ? require(file)
                     : await (0, import_file_1.default)(file);
-                const { slash, testOnly, description, delete: del, aliases = [] } = commandObject;
+                const { type: commandType, testOnly, description, delete: del, aliases = [] } = commandObject;
                 if (del) {
                     if (testOnly) {
                         for (const guildId of this._instance.testServers) {
@@ -66,24 +66,22 @@ class CommandHandler {
                     validation
                         .then((validate) => validate(command))
                         .catch(err => {
-                        const error = err;
-                        const showFullErrorLog = this._debugging !== undefined
-                            ? this._debugging.showFullErrorLog
-                            : false;
-                        (0, handle_error_1.default)(error, showFullErrorLog);
+                        const showFullErrorLog = this._debugging ? this._debugging.showFullErrorLog : false;
+                        (0, handle_error_1.default)(err, showFullErrorLog, command.commandName);
                     });
                 }
                 ;
-                if (slash === true || slash === 'both') {
+                this.commands.set(command.commandName, command);
+                if (commandType === "SLASH" || commandType === "BOTH") {
                     const options = commandObject.options || this._slashCommands.createOptions(commandObject);
-                    if (testOnly === true) {
+                    if (testOnly) {
                         for (const guildId of this._instance.testServers) {
                             this._slashCommands.create(commandName, description, options ?? [], guildId);
                         }
                     }
                     else
                         this._slashCommands.create(commandName, description, options ?? []);
-                    if (slash !== true) {
+                    if (commandType !== "SLASH") {
                         const names = [command.commandName, ...aliases];
                         for (const name of names) {
                             this.commands.set(name, command);
@@ -91,13 +89,12 @@ class CommandHandler {
                     }
                     ;
                 }
-                this.commands.set(command.commandName, command);
             }
             catch (err) {
                 const showFullErrorLog = this._debugging
                     ? this._debugging.showFullErrorLog
                     : false;
-                (0, handle_error_1.default)(err, showFullErrorLog);
+                (0, handle_error_1.default)(err, showFullErrorLog, commandName);
             }
         }
         const noCommands = this.commands.size === 0;
@@ -106,8 +103,15 @@ class CommandHandler {
     }
     async runCommand(commandName, args, message, interaction) {
         const command = this.commands.get(commandName);
-        if (!command)
+        if (!command) {
+            if (interaction)
+                interaction.reply({
+                    content: `This command is either deleted or is improperly registered`,
+                    ephemeral: true,
+                });
             return;
+        }
+        ;
         const usage = {
             client: this._instance.client,
             message,
@@ -117,8 +121,9 @@ class CommandHandler {
             guild: message ? message.guild : interaction.guild,
             member: message ? message.member : interaction.member,
             user: message ? message.author : interaction.user,
+            channel: message ? message.channel : interaction.channel,
         };
-        if (message && command.commandObject.slash === true)
+        if (message && command.commandObject.type === "SLASH")
             return;
         for (const validation of this._validations) {
             const valid = await validation.then(validate => validate(command, usage, message ? this._defaultPrefix : '/'));
@@ -126,8 +131,10 @@ class CommandHandler {
                 return;
         }
         try {
-            const { callback } = command.commandObject;
-            return await callback(usage);
+            const { deferReply = false, callback, ephemeralReply = false } = command.commandObject;
+            if (deferReply && interaction)
+                await interaction.deferReply({ ephemeral: ephemeralReply });
+            return { response: await callback(usage), deferReply, ephemeralReply };
         }
         catch (err) {
             const showFullErrorLog = this._debugging ? this._debugging.showFullErrorLog : false;
@@ -147,9 +154,9 @@ class CommandHandler {
                 .toLowerCase();
             if (!commandName)
                 return;
-            const response = await this.runCommand(commandName, args, message, null);
-            if (response)
-                message.reply(response).catch(() => { });
+            const res = await this.runCommand(commandName, args, message, null);
+            if (res)
+                message.reply(res.response).catch(() => { });
         });
     }
     async interactionListener(client) {
@@ -157,9 +164,13 @@ class CommandHandler {
             if (!interaction.isCommand())
                 return;
             const args = interaction.options.data.map(({ value }) => String(value));
-            const response = await this.runCommand(interaction.commandName, args, null, interaction);
-            if (response)
-                interaction.reply(response).catch(() => { });
+            const res = await this.runCommand(interaction.commandName, args, null, interaction);
+            if (res)
+                res.deferReply
+                    ? interaction.followUp(res.response).catch(() => { })
+                    : typeof res.response === "string"
+                        ? interaction.reply({ content: res.response, ephemeral: res.ephemeralReply }).catch(() => { })
+                        : interaction.reply(res.response).catch(() => { });
         });
     }
 }

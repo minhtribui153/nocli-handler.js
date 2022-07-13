@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionData, Client, CommandInteraction, Guild, GuildMember, Message, User } from "discord.js";
+import { AnyChannel, ApplicationCommandOptionData, Client, CommandInteraction, Guild, GuildMember, Message, TextBasedChannel, User } from "discord.js";
 import { ConnectOptions } from "mongoose";
 import Command from "../command-handler/Command";
 
@@ -62,8 +62,8 @@ export type NoCliLanguageType = "TypeScript" | "JavaScript";
 
 // Command Reference:
 export interface ICommand {
-    /** Whether the command is slash command, legacy command, or both */
-    slash?: NoCliIsSlash;
+    /** Sets the command type */
+    type: NoCliCommandType;
     /** Tells the command handler whether to disable this command from interaction with the guilds */
     delete?: boolean;
     /** Runs events inside a command */
@@ -86,12 +86,18 @@ export interface ICommand {
     correctSyntax?: string;
     /** The correct syntax on how the arguments should be in place. */
     expectedArgs?: string;
+    /** Defines the Slash Command option property for expectedArgs */
+    expectedArgsTypes?: ICommandOptionType[];
     /** Whether the command is for test guilds  */
     testOnly?: boolean;
     /** Whether the command only works only in guilds  */
     guildOnly?: boolean;
     /** Whether the command is only allowed for bot owners  */
     ownerOnly?: boolean;
+    /** Tells the command handler whether to defer interaction reply */
+    deferReply?: boolean;
+    /** Tells the command handler whether to make interaction reply ephemeral */
+    ephemeralReply?: boolean;
     /** 
      * The Discord.JS arguments (only works for Slash Commands)
      * Specify this if you are used to handle Discord.JS arguments with Slash Commands.
@@ -120,6 +126,19 @@ export type CommandCallbackOptions = {
     member: GuildMember | null;
     /** The user who ran this command */
     user: User;
+    /** The text channel the command was ran from */
+    channel: AnyChannel | TextBasedChannel | null;
 }
 
-export type NoCliIsSlash = boolean | "both";
+export type ICommandOptionType =
+| "STRING"
+| "INTEGER"
+| "BOOLEAN"
+| "USER"
+| "CHANNEL"
+| "ROLE"
+| "MENTIONABLE"
+| "NUMBER"
+| "ATTACHMENT"
+
+export type NoCliCommandType = "SLASH" | "LEGACY" | "BOTH";

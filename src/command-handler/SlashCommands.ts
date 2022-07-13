@@ -1,4 +1,4 @@
-import { ApplicationCommandOption, ApplicationCommandOptionData, Client, SplitOptions } from "discord.js";
+import { ApplicationCommand, ApplicationCommandManager, ApplicationCommandOption, ApplicationCommandOptionData, Client, GuildApplicationCommandManager, SplitOptions } from "discord.js";
 import handleError from "../functions/handle-error";
 import { log } from "../functions/log";
 import { ICommand } from "../types";
@@ -16,10 +16,19 @@ class SlashCommands {
      * Gets the Slash commands based on the guild ID.
      * @param guildId The guild id (optional)
      */
-    getCommands(guildId?: string) {
-        if (guildId) return this._client.guilds.cache.get(guildId)?.commands;
+    async getCommands(guildId?: string): Promise<ApplicationCommandManager | GuildApplicationCommandManager> {
+        let commands: ApplicationCommandManager | GuildApplicationCommandManager;
+        if (guildId) {
+            const guild = await this._client.guilds.fetch(guildId);
+            commands = guild.commands;
+        } else {
+            commands = this._client.application!.commands;
+        };
 
-        return this._client.application!.commands;
+        // @ts-ignore
+        await commands.fetch()
+
+        return commands;
     }
 
     optionsAreDifferent(existingOptions: ApplicationCommandOption[], options: ApplicationCommandOptionData[]): boolean {
@@ -34,22 +43,6 @@ class SlashCommands {
         return false
     }
 
-    /** Re-edits the options if they do not follow the Slash Command format */
-    reEditOptions(commandName: string, options: ApplicationCommandOptionData[]): ApplicationCommandOptionData[] {
-        for (let i = 0; i < options.length; ++i) {
-            const name = options[i].name;
-            let lowerCase = name.toLowerCase();
-            if (lowerCase !== name) log("NoCliHandler", "warn", `Command "${commandName}" has option "${name}" with a upper case. All option names must be lowercase for slash commands. Automatically changing to "${lowerCase}"`);
-            if (lowerCase.match(/\s/g)) {
-                lowerCase = lowerCase.replace(/\s/g, '_');
-                log("NoCliHandler", "warn", `Command "${commandName}" has option "${name}" with spaces. The best practice is for option names to only be one word. Automatically changing to "${lowerCase}"`);
-            }
-            options[i].name = lowerCase;
-        }
-
-        return options;
-    }
-
     /**
      * Creates a new Slash Command
      * @param name The name of the command
@@ -57,16 +50,12 @@ class SlashCommands {
      * @param parsedOptions The command options
      * @param guildId The guild ID (optional)
      */
-    async create(name: string, description: string, parsedOptions: ApplicationCommandOptionData[] = [], guildId?: string) {
-        const commands = this.getCommands(guildId);
+    async create(name: string, description: string, options: ApplicationCommandOptionData[] = [], guildId?: string) {
+        const lowerCaseName = name.toLowerCase();
+        const commands = await this.getCommands(guildId);
         if (!commands) return;
 
-        const options = this.reEditOptions(name, parsedOptions);
-
-        // @ts-ignore
-        await commands.fetch()
-
-        const existingCommand = commands.cache.find(cmd => cmd.name === name);
+        const existingCommand = commands.cache.find(cmd => cmd.name === lowerCaseName);
         if (existingCommand) {
             const { description: existingDescription, options: existingOptions } = existingCommand;
             if (
@@ -77,8 +66,8 @@ class SlashCommands {
                 log("NoCliHandler", "info", `Automatically updating slash command "${name}"${guildId ? ` for Guild with ID "${guildId}"` : ''}`);
 
                 await commands.edit(existingCommand.id, {
-                    name,
                     description,
+                    // @ts-ignore
                     options,
                 })
             }
@@ -88,9 +77,11 @@ class SlashCommands {
 
         log("NoCliHandler", "info", `Deploying slash command "${name}" ${guildId ? `to Guild with ID "${guildId}"` : ''}`);
 
+        
+
         return await commands
             .create({
-                name,
+                name: lowerCaseName,
                 description,
                 options
             })
@@ -103,14 +94,11 @@ class SlashCommands {
      * @param guildId  The guild ID (optional)
      */
     async delete(commandName: string, guildId: string = '') {
-        const commands = this.getCommands(guildId);
+        const commands = await this.getCommands(guildId);
 
         if (!commands) return;
-        
-        // @ts-ignore
-        await commands.fetch()
 
-        const targetCommand = commands.cache.find(cmd => cmd.name === commandName);
+        const targetCommand = commands.cache.find(cmd => cmd.name === commandName) as ApplicationCommand;
         if (!targetCommand) return;
 
         log("NoCliHandler", "info", `Deleting slash command "${commandName}" ${guildId ? `from Guild with ID "${guildId}"` : ''}`);
@@ -125,7 +113,7 @@ class SlashCommands {
      * @param param0 The ICommand Interface
      * @returns {ApplicationCommandOptionData[]}
      */
-    createOptions({ expectedArgs = '', minArgs = 0 }: ICommand): ApplicationCommandOptionData[] {
+    createOptions({ expectedArgs = '', minArgs = 0, expectedArgsTypes = [] }: ICommand): ApplicationCommandOptionData[] {
         const options: ApplicationCommandOptionData[] = [];
 
         const split = expectedArgs
@@ -137,10 +125,13 @@ class SlashCommands {
         for (var a = 0; a < split.length; ++a) {
             const item = split[a];
             if (item.length === 0) continue;
+            // @ts-ignore
             options.push({
                 name: item.toLowerCase().replace(/\s+/g, '-'),
                 description: item,
-                type: "STRING",
+                type: expectedArgsTypes.length >= (a + 1)
+                ? expectedArgsTypes[a]
+                : 'STRING',
                 required: a < minArgs,
             })
         }

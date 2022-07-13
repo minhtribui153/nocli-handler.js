@@ -20,6 +20,7 @@ const log = (name, type, ...args) => {
     const color = handleColorType(type);
     const infoType = `[${name}]`;
     const timeType = `[${time}]`;
-    return console.log(chalk_1.default.bold["grey"](timeType) + chalk_1.default.bold[color](infoType), args.join(" "));
+    console.log(chalk_1.default.bold["grey"](timeType) + chalk_1.default.bold[color](infoType), args.join(" "));
+    return;
 };
 exports.log = log;
