@@ -58,7 +58,7 @@ class CommandHandler {
                     ? require(file) as ICommand
                     : await importFile<ICommand>(file);
 
-                const { type: commandType, testOnly, description, delete: del, aliases = [] } = commandObject;
+                const { type: commandType, testOnly, description, delete: del, aliases = [], init = () => {} } = commandObject;
 
                 if (del) {
                     if (testOnly) {
@@ -81,6 +81,8 @@ class CommandHandler {
                         })
                 };
 
+                await init(this._instance.client, this._instance)
+
                 this.commands.set(command.commandName, command);
 
                 if (commandType === "SLASH" || commandType === "BOTH") {
@@ -91,14 +93,11 @@ class CommandHandler {
                             this._slashCommands.create(commandName, description, options ?? [], guildId);
                         }
                     } else this._slashCommands.create(commandName, description, options ?? []);
+                }
 
-                    if (commandType !== "SLASH") {
-                        const names = [command.commandName, ...aliases];
-                        
-                        for (const name of names) {
-                            this.commands.set(name, command);
-                        }
-                    };
+                if (commandType !== "SLASH") {
+                    const names = [command.commandName, ...aliases];
+                    for (const name of names) this.commands.set(name, command);
                 }
             } catch (err) {
                 const showFullErrorLog = this._debugging
@@ -114,7 +113,6 @@ class CommandHandler {
     }
 
     private async runCommand(commandName: string, args: string[], message: Message | null, interaction: CommandInteraction | null) {
-
         const command = this.commands.get(commandName);
         if (!command) {
             if (interaction) interaction.reply({
@@ -135,6 +133,7 @@ class CommandHandler {
             user: message ? message.author : interaction!.user,
             channel: message ? message.channel : interaction!.channel,
         };
+
         if (message && command.commandObject.type === "SLASH") return;
 
         for (const validation of this._validations) {
@@ -171,16 +170,17 @@ class CommandHandler {
 
     private async interactionListener(client: Client) {
         client.on("interactionCreate", async interaction => {
-            if (!interaction.isCommand()) return;
+
+            if (!interaction.isChatInputCommand()) return;
 
             const args = interaction.options.data.map(({ value }) => String(value));
 
             const res = await this.runCommand(interaction.commandName, args, null, interaction);
             if (res) res.deferReply
-            ? interaction.followUp(res.response).catch(() => {})
-            : typeof res.response === "string"
-                ? interaction.reply({ content: res.response, ephemeral: res.ephemeralReply }).catch(() => {})
-                : interaction.reply(res.response).catch(() => {});
+                ? interaction.followUp(res.response).catch(() => {})
+                : typeof res.response === "string"
+                    ? interaction.reply({ content: res.response, ephemeral: res.ephemeralReply }).catch(() => {})
+                    : interaction.reply(res.response).catch(() => {});
             
         });
     }

@@ -48,7 +48,7 @@ class CommandHandler {
                 const commandObject = this._suffix === "js"
                     ? require(file)
                     : await (0, import_file_1.default)(file);
-                const { type: commandType, testOnly, description, delete: del, aliases = [] } = commandObject;
+                const { type: commandType, testOnly, description, delete: del, aliases = [], init = () => { } } = commandObject;
                 if (del) {
                     if (testOnly) {
                         for (const guildId of this._instance.testServers) {
@@ -71,6 +71,7 @@ class CommandHandler {
                     });
                 }
                 ;
+                await init(this._instance.client, this._instance);
                 this.commands.set(command.commandName, command);
                 if (commandType === "SLASH" || commandType === "BOTH") {
                     const options = commandObject.options || this._slashCommands.createOptions(commandObject);
@@ -81,13 +82,11 @@ class CommandHandler {
                     }
                     else
                         this._slashCommands.create(commandName, description, options ?? []);
-                    if (commandType !== "SLASH") {
-                        const names = [command.commandName, ...aliases];
-                        for (const name of names) {
-                            this.commands.set(name, command);
-                        }
-                    }
-                    ;
+                }
+                if (commandType !== "SLASH") {
+                    const names = [command.commandName, ...aliases];
+                    for (const name of names)
+                        this.commands.set(name, command);
                 }
             }
             catch (err) {
@@ -161,7 +160,7 @@ class CommandHandler {
     }
     async interactionListener(client) {
         client.on("interactionCreate", async (interaction) => {
-            if (!interaction.isCommand())
+            if (!interaction.isChatInputCommand())
                 return;
             const args = interaction.options.data.map(({ value }) => String(value));
             const res = await this.runCommand(interaction.commandName, args, null, interaction);

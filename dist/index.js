@@ -40,7 +40,7 @@ const show_intro_banner_1 = __importDefault(require("./functions/show-intro-bann
 const is_correct_version_1 = __importDefault(require("./functions/is-correct-version"));
 class NoCliHandler {
     _options;
-    _version = 'v1.0.33';
+    _version = 'v1.0.7';
     _testServers = [];
     _botOwners = [];
     _configuration;

@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const discord_js_1 = require("discord.js");
 const handle_error_1 = __importDefault(require("../functions/handle-error"));
 const log_1 = require("../functions/log");
 class SlashCommands {
@@ -44,7 +45,7 @@ class SlashCommands {
      * Creates a new Slash Command
      * @param name The name of the command
      * @param description The description of the command
-     * @param parsedOptions The command options
+     * @param options The command options
      * @param guildId The guild ID (optional)
      */
     async create(name, description, options = [], guildId) {
@@ -115,7 +116,7 @@ class SlashCommands {
                 description: item,
                 type: expectedArgsTypes.length >= (a + 1)
                     ? expectedArgsTypes[a]
-                    : 'STRING',
+                    : discord_js_1.ApplicationCommandOptionType.String,
                 required: a < minArgs,
             });
         }

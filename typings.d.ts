@@ -1,4 +1,4 @@
-import { ApplicationCommand, ApplicationCommandOption, ApplicationCommandOptionData, GuildMember, Client, ClientApplication, Guild, Message, AnyChannel, TextBasedChannel } from 'discord.js';
+import { ApplicationCommand, ApplicationCommandOption, ApplicationCommandOptionData, GuildMember, Client, ClientApplication, Guild, Message, Channel, TextBasedChannel } from 'discord.js';
 import mongoose, { ConnectOptions } from 'mongoose';
 import showBanner from 'node-banner';
 import chalk from 'chalk';
@@ -211,7 +211,7 @@ export interface ICommand {
     /** Tells the command handler whether to disable this command from interaction with the guilds */
     delete?: boolean;
     /** Runs events inside a command */
-    init?: (client: Client) => void;
+    init?: (client: Client, instance: NoCliHandler) => void;
     /** The description of the command */
     description: string;
     /** The minimum amount of arguments for the command */
@@ -286,7 +286,7 @@ export type CommandCallbackOptions = {
     /** The user who ran this command */
     user: User;
     /** The channel the command was ran from */
-    channel: AnyChannel | TextBasedChannel | null;
+    channel: Channel | TextBasedChannel | null;
 }
 
 export type NoCliCommandType = "SLASH" | "LEGACY" | "BOTH";

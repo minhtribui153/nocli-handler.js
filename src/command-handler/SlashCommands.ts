@@ -1,4 +1,4 @@
-import { ApplicationCommand, ApplicationCommandManager, ApplicationCommandOption, ApplicationCommandOptionData, Client, GuildApplicationCommandManager, SplitOptions } from "discord.js";
+import { ApplicationCommand, ApplicationCommandManager, ApplicationCommandOption, ApplicationCommandOptionData, ApplicationCommandOptionType, Client, GuildApplicationCommandManager } from "discord.js";
 import handleError from "../functions/handle-error";
 import { log } from "../functions/log";
 import { ICommand } from "../types";
@@ -47,7 +47,7 @@ class SlashCommands {
      * Creates a new Slash Command
      * @param name The name of the command
      * @param description The description of the command
-     * @param parsedOptions The command options
+     * @param options The command options
      * @param guildId The guild ID (optional)
      */
     async create(name: string, description: string, options: ApplicationCommandOptionData[] = [], guildId?: string) {
@@ -131,7 +131,7 @@ class SlashCommands {
                 description: item,
                 type: expectedArgsTypes.length >= (a + 1)
                 ? expectedArgsTypes[a]
-                : 'STRING',
+                : ApplicationCommandOptionType.String,
                 required: a < minArgs,
             })
         }

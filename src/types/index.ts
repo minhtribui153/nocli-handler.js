@@ -1,5 +1,6 @@
-import { AnyChannel, ApplicationCommandOptionData, Client, CommandInteraction, Guild, GuildMember, Message, TextBasedChannel, User } from "discord.js";
+import { Channel, ApplicationCommandOptionData, Client, CommandInteraction, Guild, GuildMember, Message, TextBasedChannel, User, ApplicationCommandOptionType } from "discord.js";
 import { ConnectOptions } from "mongoose";
+import NoCliHandler from "..";
 import Command from "../command-handler/Command";
 
 // NoCliHandler Reference:
@@ -67,7 +68,7 @@ export interface ICommand {
     /** Tells the command handler whether to disable this command from interaction with the guilds */
     delete?: boolean;
     /** Runs events inside a command */
-    init?: (client: Client) => void;
+    init?: (client: Client, instance: NoCliHandler) => void;
     /** The description of the command */
     description: string;
     /** The minimum amount of arguments for the command */
@@ -87,7 +88,7 @@ export interface ICommand {
     /** The correct syntax on how the arguments should be in place. */
     expectedArgs?: string;
     /** Defines the Slash Command option property for expectedArgs */
-    expectedArgsTypes?: ICommandOptionType[];
+    expectedArgsTypes?: ApplicationCommandOptionType[];
     /** Whether the command is for test guilds  */
     testOnly?: boolean;
     /** Whether the command only works only in guilds  */
@@ -127,18 +128,7 @@ export type CommandCallbackOptions = {
     /** The user who ran this command */
     user: User;
     /** The text channel the command was ran from */
-    channel: AnyChannel | TextBasedChannel | null;
+    channel: Channel | TextBasedChannel | null;
 }
-
-export type ICommandOptionType =
-| "STRING"
-| "INTEGER"
-| "BOOLEAN"
-| "USER"
-| "CHANNEL"
-| "ROLE"
-| "MENTIONABLE"
-| "NUMBER"
-| "ATTACHMENT"
 
 export type NoCliCommandType = "SLASH" | "LEGACY" | "BOTH";

@@ -26,7 +26,7 @@ import Command from './command-handler/Command';
 
 class NoCliHandler {
     private _options: NoCliHandlerOptions;
-    private _version: string = 'v1.0.33';
+    private _version: string = 'v1.0.7';
     private _testServers: string[] = [];
     private _botOwners: string[] = [];
     private _configuration: NoCliHandlerOptions["configuration"];

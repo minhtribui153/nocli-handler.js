@@ -11,15 +11,6 @@ class Command {
         this._commandName = commandName.toLowerCase();
         this._commandObject = commandObject;
         this._instance = instance;
-
-        try {
-            commandObject.init
-                ? commandObject.init(this._instance.client)
-                : null;
-        } catch (err) {
-            const showFullErrorLog = this._instance.debug ? this._instance.debug.showFullErrorLog : false;
-            handleError(err, showFullErrorLog, this._commandName);
-        }
     }
 
     get instance(): NoCliHandler { return this._instance }
