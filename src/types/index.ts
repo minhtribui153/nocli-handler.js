@@ -95,10 +95,12 @@ export interface ICommand {
     guildOnly?: boolean;
     /** Whether the command is only allowed for bot owners  */
     ownerOnly?: boolean;
-    /** Tells the command handler whether to defer interaction reply */
+    /** Tells the command handler whether to defer command reply */
     deferReply?: boolean;
     /** Tells the command handler whether to make interaction reply ephemeral */
     ephemeralReply?: boolean;
+    /** Tells the command handler whether to tell the bot to reply or send channel message (only works for Legacy Commands) */
+    reply?: boolean;
     /** 
      * The Discord.JS arguments (only works for Slash Commands)
      * Specify this if you are used to handle Discord.JS arguments with Slash Commands.
@@ -131,4 +133,8 @@ export type CommandCallbackOptions = {
     channel: Channel | TextBasedChannel | null;
 }
 
-export type NoCliCommandType = "SLASH" | "LEGACY" | "BOTH";
+export enum NoCliCommandType {
+    Slash = 0,
+    Legacy = 1,
+    Both = 2
+};

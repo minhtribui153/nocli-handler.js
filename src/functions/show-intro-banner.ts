@@ -11,6 +11,5 @@ export default async (version: string) => {
     console.log(chalk.bold.cyan(" Github Repo: https://github.com/tribui141108/nocli-handler.js"));
     console.log("\n");
     console.log(chalk.bold.magentaBright(" README: https://github.com/tribui141108/NoCli-Handler.js#readme"));
-    console.log(chalk.bold.red(" For errors relating to nocli-handler.js, please read https://github.com/tribui141108/nocli-handler.js/blob/master/docs/Errors.md"));
     console.log(chalk.bold.gray('================================================================'));
 }

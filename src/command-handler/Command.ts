@@ -1,6 +1,5 @@
 import { ICommand } from '../types';
 import NoCliHandler from '..';
-import handleError from '../functions/handle-error';
 
 class Command {
     private _commandName: string;

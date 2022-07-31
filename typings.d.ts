@@ -248,8 +248,10 @@ export interface ICommand {
     guildOnly?: boolean;
     /** Whether the command is only allowed for bot owners  */
     ownerOnly?: boolean;
-    /** Tells the command handler whether to delay interaction reply when any value is returned from the command */
+    /** Tells the command handler whether to delay command reply when any value is returned from the command */
     deferReply?: boolean;
+    /** Tells the command handler whether to tell the bot to reply or send channel message (only works for Legacy Commands) */
+    reply?: boolean;
     /** 
      * Tells the command handler whether to make interaction reply ephemeral when any value is returned from the command.
      * 
@@ -289,7 +291,11 @@ export type CommandCallbackOptions = {
     channel: Channel | TextBasedChannel | null;
 }
 
-export type NoCliCommandType = "SLASH" | "LEGACY" | "BOTH";
+export enum NoCliCommandType {
+    Slash = 0,
+    Legacy = 1,
+    Both = 2
+};
 
 // src/util/get-all-files.ts
 function getAllFiles(path: string): string[];

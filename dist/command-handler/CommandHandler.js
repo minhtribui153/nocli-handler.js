@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const types_1 = require("../types");
 const log_1 = require("../functions/log");
 const get_all_files_1 = __importDefault(require("../util/get-all-files"));
 const Command_1 = __importDefault(require("./Command"));
@@ -73,7 +74,7 @@ class CommandHandler {
                 ;
                 await init(this._instance.client, this._instance);
                 this.commands.set(command.commandName, command);
-                if (commandType === "SLASH" || commandType === "BOTH") {
+                if (commandType === types_1.NoCliCommandType.Slash || commandType === types_1.NoCliCommandType.Both) {
                     const options = commandObject.options || this._slashCommands.createOptions(commandObject);
                     if (testOnly) {
                         for (const guildId of this._instance.testServers) {
@@ -83,7 +84,7 @@ class CommandHandler {
                     else
                         this._slashCommands.create(commandName, description, options ?? []);
                 }
-                if (commandType !== "SLASH") {
+                if (commandType !== types_1.NoCliCommandType.Slash) {
                     const names = [command.commandName, ...aliases];
                     for (const name of names)
                         this.commands.set(name, command);
@@ -122,7 +123,7 @@ class CommandHandler {
             user: message ? message.author : interaction.user,
             channel: message ? message.channel : interaction.channel,
         };
-        if (message && command.commandObject.type === "SLASH")
+        if (message && command.commandObject.type === types_1.NoCliCommandType.Slash)
             return;
         for (const validation of this._validations) {
             const valid = await validation.then(validate => validate(command, usage, message ? this._defaultPrefix : '/'));
@@ -130,10 +131,12 @@ class CommandHandler {
                 return;
         }
         try {
-            const { deferReply = false, callback, ephemeralReply = false } = command.commandObject;
-            if (deferReply && interaction)
-                await interaction.deferReply({ ephemeral: ephemeralReply });
-            return { response: await callback(usage), deferReply, ephemeralReply };
+            const { deferReply = false, callback, ephemeralReply = false, reply = false } = command.commandObject;
+            if (deferReply)
+                interaction
+                    ? await interaction.deferReply({ ephemeral: ephemeralReply })
+                    : await message.channel.sendTyping();
+            return { response: await callback(usage), deferReply, ephemeralReply, reply };
         }
         catch (err) {
             const showFullErrorLog = this._debugging ? this._debugging.showFullErrorLog : false;
@@ -154,8 +157,12 @@ class CommandHandler {
             if (!commandName)
                 return;
             const res = await this.runCommand(commandName, args, message, null);
-            if (res)
-                message.reply(res.response).catch(() => { });
+            if (res) {
+                const { response, reply } = res;
+                reply
+                    ? message.reply(response).catch(() => { })
+                    : message.channel.send(response).catch(() => { });
+            }
         });
     }
     async interactionListener(client) {
@@ -164,12 +171,14 @@ class CommandHandler {
                 return;
             const args = interaction.options.data.map(({ value }) => String(value));
             const res = await this.runCommand(interaction.commandName, args, null, interaction);
-            if (res)
-                res.deferReply
-                    ? interaction.followUp(res.response).catch(() => { })
-                    : typeof res.response === "string"
-                        ? interaction.reply({ content: res.response, ephemeral: res.ephemeralReply }).catch(() => { })
-                        : interaction.reply(res.response).catch(() => { });
+            if (res) {
+                const { response, deferReply, ephemeralReply } = res;
+                deferReply
+                    ? interaction.followUp(response).catch(() => { })
+                    : typeof response === "string"
+                        ? interaction.reply({ content: response, ephemeral: ephemeralReply }).catch(() => { })
+                        : interaction.reply(response).catch(() => { });
+            }
         });
     }
 }
