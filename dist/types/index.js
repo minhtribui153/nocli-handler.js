@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.NoCliCommandType = void 0;
+exports.NoCliCommandType = exports.cooldownTypesArray = void 0;
+// Arrays
+exports.cooldownTypesArray = ['perUser', 'perUserPerGuild', 'perGuild', 'global'];
 var NoCliCommandType;
 (function (NoCliCommandType) {
     NoCliCommandType[NoCliCommandType["Slash"] = 0] = "Slash";

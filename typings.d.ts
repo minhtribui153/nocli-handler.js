@@ -138,9 +138,9 @@ export const log = (name: string, type: NoCliLogType, ...args: string[]) => {};
 const showIntroBanner = (version: string): void => {};
 
 // src/types/index.ts
-import { Client, CommandInteraction, Guild, Message } from "discord.js";
-import { ConnectOptions } from "mongoose";
-import Command from "../command-handler/Command";
+
+// Arrays
+export const cooldownTypesArray = ['perUser', 'perUserPerGuild', 'perGuild', 'global'] as const;
 
 // NoCliHandler Reference:
 export type NoCliHandlerOptions = {
@@ -153,7 +153,6 @@ export type NoCliHandlerOptions = {
         /** The MongoDB options (optional) */
         options?: ConnectOptions;
     }
-    /** The Bot Configuration */
     configuration: {
         /** The default prefix for the bot (default prefix = "!") */
         defaultPrefix?: string;
@@ -161,17 +160,22 @@ export type NoCliHandlerOptions = {
         commandsDir?: string;
         /** The directory where the features are stored */
         featuresDir?: string;
-        /** The array of Discord ID of bot owners */
-        botOwners?: string[];
     };
-    /** The Environment Configuration  */
     debugging?: {
         /** Whether or not to show the full error log */
         showFullErrorLog?: boolean;
         /** Whether or not to show the banner upon the start of the program  */
         showBanner?: boolean;
     };
-    /** The test guilds testonly commands can only work in  */
+    cooldownConfig?: {
+        /** Sets the default error message for cooldowns, if any */
+        defaultErrorMessage?: string;
+        /** Whether to allow bot owners to bypass cooldowns */
+        botOwnersBypass?: boolean;
+        /** If a command cooldown exceeds the current cooldown limit set for this option, they will be stored in a MongoDB database (seconds)  */
+        dbRequired: number;
+    };
+    /** The test guilds `testonly` commands can only work in  */
     testServers?: string[];
     /** The array of Discord ID of bot owners */
     botOwners?: string[];
@@ -198,11 +202,30 @@ export type NoCliHandlerOptions = {
      */
     clientVersion: string;
 }
+
+// NoCliCooldown Reference:
+export type NoCliCooldownOptions = {
+    instance: NoCliHandler;
+    errorMessage?: string | undefined;
+    botOwnersBypass?: boolean | undefined;
+    dbRequired?: number | undefined;
+}
+
+export type NoCliCooldownKeyOptions = {
+    cooldownType: NoCliCooldownType;
+    userId: string;
+    actionId: string;
+    guildId?: string;
+    duration?: string | number;
+    errorMessage?: string;
+}
+
 export type NoCliRuntimeValidationType = (command: Command, usage: CommandCallbackOptions, prefix: string) => boolean;
 export type NoCliSyntaxValidationType = (command: Command) => void;
 
 export type NoCliEnvironmentType = "PRODUCTION" | "DEVELOPMENT" | "TESTING";
 export type NoCliLanguageType = "TypeScript" | "JavaScript";
+export type NoCliCooldownType = typeof cooldownTypesArray[number];
 
 // Command Reference:
 export interface ICommand {
@@ -228,40 +251,25 @@ export interface ICommand {
      * ```
      */
     correctSyntax?: string;
-    /**
-     * The expected arguments that should be in place.
-     * 
-     * **Annotations:**
-     * ```
-     * <argument_name> = Required Argument
-     * [argument_name] = Optional Argument
-     * ```
-     * **IMPORTANT: If you do not specify minArgs, these arguments will be displayed as optional for the Slash Command.**
-     * **However, you still have to specify these annotations as it is required and can help you understand what your arguments are supposed to be.**
-     */
+    /** The correct syntax on how the arguments should be in place. */
     expectedArgs?: string;
-    /** Defines the Slash Command option property for each argument in expectedArgs */
-    expectedArgsTypes?: ApplicationCommandNonOptionsData[];
-    /** Whether the command is for test guilds or not  */
+    /** Defines the Slash Command option property for expectedArgs */
+    expectedArgsTypes?: ApplicationCommandOptionType[];
+    /** Whether the command is for test guilds  */
     testOnly?: boolean;
     /** Whether the command only works only in guilds  */
     guildOnly?: boolean;
     /** Whether the command is only allowed for bot owners  */
     ownerOnly?: boolean;
-    /** Tells the command handler whether to delay command reply when any value is returned from the command */
-    deferReply?: boolean;
+    /** Tells the command handler whether to defer command reply */
+    deferReply?: boolean | "ephemeral";
     /** Tells the command handler whether to tell the bot to reply or send channel message (only works for Legacy Commands) */
     reply?: boolean;
+    /** The command cooldowns */
+    cooldowns: NoCliCommandCooldown;
     /** 
-     * Tells the command handler whether to make interaction reply ephemeral when any value is returned from the command.
-     * 
-     * **IMPORTANT: This option will only be ignored if you return a value as an `Object` for a normal interaction reply**
-    */
-    ephemeralReply?: boolean;
-    /** 
-     * The Discord.JS arguments (only works for Slash Commands).
+     * The Discord.JS arguments (only works for Slash Commands)
      * Specify this if you are used to handle Discord.JS arguments with Slash Commands.
-     * Don't worry, your expectedArgs will not be used.
      */
     options?: ApplicationCommandOptionData[];
     /** The function to execute when the command is called */
@@ -287,8 +295,25 @@ export type CommandCallbackOptions = {
     member: GuildMember | null;
     /** The user who ran this command */
     user: User;
-    /** The channel the command was ran from */
+    /** The text channel the command was ran from */
     channel: Channel | TextBasedChannel | null;
+    /** Cancels the cooldown for this command */
+    cancelCooldown: () => void;
+    /** Updates the cooldown for this command */
+    updateCooldown: (expires: Date) => void;
+}
+
+export type NoCliCommandCooldown = {
+    /** Sets cooldowns for each user */
+    perUser?: string | number;
+    /** Sets cooldowns for each user per guild */
+    perUserPerGuild?: string | number;
+    /** Sets cooldowns for each guild */
+    perGuild?: string | number;
+    /** Sets cooldowns for every server the user was in */
+    global?: string | number;
+    /** The cooldown message to send, if any */
+    errorMessage?: string;
 }
 
 export enum NoCliCommandType {
@@ -297,10 +322,54 @@ export enum NoCliCommandType {
     Both = 2
 };
 
+// src/util/Cooldowns.ts
+
+const cooldownDurations = {
+    s: 1,
+    m: 60,
+    h: 60 * 60,
+    d: 60 * 60 * 24
+} as const;
+
+/** Sets cooldowns for the database and the bot */
+export class Cooldowns {
+    private _cooldowns = new Map<string, Date>();
+    private _instance: NoCliHandler;
+    private _errorMessage: string
+    private _botOwnersBypass: boolean;
+    private _dbRequired: number;
+
+
+    constructor(options: NoCliCooldownOptions) {}
+
+    /** Loads all cooldowns from the database */
+    async loadCooldowns() {}
+
+    getKeyFromCooldownUsage(options: NoCliCooldownKeyOptions): string {}
+
+    async cancelCooldown(cooldownUsage: NoCliCooldownKeyOptions) {}
+
+    async updateCooldown(cooldownUsage: NoCliCooldownKeyOptions, expires: Date) {}
+
+    /** Verifies the cooldown duration */
+    verifyCooldown(duration: string | number): number {}
+
+    /** Gets the cooldown key */
+    getKey(cooldownType: NoCliCooldownType, userId?: string, actionId?: string, guildId?: string): string {}
+
+    /** Checks if user can bypass cooldown integrations */
+    canBypass(userId: string): boolean {}
+
+    /** Starts the cooldown */
+    async start(options: NoCliCooldownKeyOptions) {}
+
+    canRunAction(options: NoCliCooldownKeyOptions): string | true {}
+}
+
 // src/util/get-all-files.ts
 function getAllFiles(path: string): string[];
 
 // src/util/import-file.ts
-
+const importFile = <T>(filePath: string): T => {}
 
 export default NoCliHandler;

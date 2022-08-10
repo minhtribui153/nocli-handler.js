@@ -7,13 +7,15 @@ export * from "./types";
 // Classes
 export * from "./command-handler/Command";
 export * from "./command-handler/SlashCommands";
+export * from "./util/Cooldowns";
 // Errors
 export * from "./errors/NoCliCommandError";
 export * from "./errors/NoCliHandlerError";
 
 // <---- IMPORTS ---->
-import DiscordJS from 'discord.js';
+import DiscordJS, { Client, User, Team } from 'discord.js';
 import CommandHandler from "./command-handler/CommandHandler";
+import Cooldowns from './util/Cooldowns';
 import NoCliHandlerError from "./errors/NoCliHandlerError";
 import mongoose from 'mongoose';
 
@@ -25,70 +27,89 @@ import isCorrectVersion from './functions/is-correct-version';
 import Command from './command-handler/Command';
 
 class NoCliHandler {
-    private _options: NoCliHandlerOptions;
-    private _version: string = 'v1.0.7';
+    private _version: string = 'v1.0.9';
     private _testServers: string[] = [];
     private _botOwners: string[] = [];
-    private _configuration: NoCliHandlerOptions["configuration"];
-    private _language: NoCliHandlerOptions["language"];
-    private _debugging: NoCliHandlerOptions["debugging"];
-    private _clientVersion: string;
     private _showBanner: boolean = true;
     private _commands: Map<string, Command> = new Map();
+    private _cooldowns: Cooldowns;
     private _defaultPrefix: string = "!";
+    private _debugging: NoCliHandlerOptions["debugging"];
+    private _client: Client;
     
     
     constructor(options: NoCliHandlerOptions) {
-        this._options = options;
-        this._configuration = options.configuration;
-        this._debugging = options.debugging;
-        this._language = options.language;
-        this._clientVersion = options.clientVersion;
+        const { client, mongoDB, clientVersion, configuration, cooldownConfig = {}, debugging = {}, botOwners = [], testServers = [], language } = options;
+        
+        this._client = client;
+        this._debugging = debugging;
+        this._testServers = testServers;
+        this._botOwners = botOwners;
+        this._cooldowns = new Cooldowns({
+            instance: this,
+            ...cooldownConfig
+        })
 
-        if (this._options.testServers) this._testServers = this._options.testServers;
-        if (this._options.botOwners) this._botOwners = this._options.botOwners;
-        if (this._configuration.defaultPrefix) this._defaultPrefix = this._configuration.defaultPrefix;
-        if (this._debugging && this._debugging.showBanner !== undefined) this._showBanner = this._debugging.showBanner;
+        if (configuration.defaultPrefix) this._defaultPrefix = configuration.defaultPrefix;
+        if (debugging && debugging.showBanner !== undefined) this._showBanner = debugging.showBanner;
         
         try {
             if (this._showBanner) showIntroBanner(this._version)
-            if (!this._clientVersion) throw new NoCliHandlerError("Client version is required");
-            if (!isCorrectVersion(this._clientVersion)) throw new NoCliHandlerError("Please install Discord.JS version " + DiscordJS.version);
-            if (!this._language || (this._language !== "JavaScript" && this._language !== "TypeScript")) throw new NoCliHandlerError("Invalid language specified");
-            if (!this._options.client) throw new NoCliHandlerError("No client provided");
-            this._options.client
+            if (!clientVersion) throw new NoCliHandlerError("Client version is required");
+            if (!isCorrectVersion(clientVersion)) throw new NoCliHandlerError("Please install Discord.JS version " + DiscordJS.version);
+            if (!language || (language !== "JavaScript" && language !== "TypeScript")) throw new NoCliHandlerError("Invalid language specified");
+            if (!client) throw new NoCliHandlerError("No client provided");
+            client
                 .setMaxListeners(Infinity)
-                .on("ready", client => {
+                .on("ready", async client => {
                     log("NoCliHandler", "info", `Your bot ${client.user.tag} is up and running`)
-                    if (this._configuration.commandsDir) {
-                        const commandHandlerInstance = new CommandHandler(this, this._configuration.commandsDir, this._language);
+                    if (!botOwners.length) {
+                        await client.application.fetch();
+                        const { owner } = client.application;
+
+                        if (owner) {
+                            // @ts-ignore
+                            if (owner.members !== undefined) {
+                                // @ts-ignore
+                                const owners = owner.members.map(member => member.id);
+                                this._botOwners.push(...owners);
+                                log("NoCliHandler", "info", `Auto set IDs "${owners.join('", "')}" as default owners`)
+                            } else {
+                                this._botOwners.push(owner.id);
+                                log("NoCliHandler", "info", `Auto set ID "${owner.id}" as a default owner`)
+                            }
+                        }
+                    }
+                    if (configuration.commandsDir) {
+                        const commandHandlerInstance = new CommandHandler(this, configuration.commandsDir, language);
                         this._commands = commandHandlerInstance.commands;
-                    } else log("NoCliHandlerWarning", "warn", "E1: No commands directory provided, you will have to handle the commands yourself");
+                    } else log("NoCliHandlerWarning", "warn", "No commands directory provided, you will have to handle the commands yourself");
                     
-                    this._options.mongoDB !== undefined
-                        ? this.connectToMongoDB(this._options.mongoDB)
-                        : log("NoCliHandlerWarning", "warn", "-");
+                    mongoDB !== undefined
+                        ? this.connectToMongoDB(mongoDB)
+                        : log("NoCliHandlerWarning", "warn", "MongoDB URI not found. Some features will not work!");
                 });
         } catch (err) {
             const error = err as any;
-            const showFullErrorLog = this._debugging !== undefined
-                ? this._debugging.showFullErrorLog
+            const showFullErrorLog = debugging !== undefined
+                ? debugging.showFullErrorLog
                 : false;
 
             handleError(error, showFullErrorLog);
         }
     }
     
-    public get client(): NoCliHandlerOptions["client"] { return this._options.client }
+    public get client(): NoCliHandlerOptions["client"] { return this._client }
     public get testServers(): string[] { return this._testServers }
     public get botOwners(): string[] { return this._botOwners }
     public get defaultPrefix(): string { return this._defaultPrefix }
     public get debug() { return this._debugging }
     public get commands(): Map<string, Command> | undefined { return this._commands }
+    public get cooldowns(): Cooldowns { return this._cooldowns }
 
     private connectToMongoDB(mongoDB: NoCliHandlerOptions["mongoDB"]) {
         const options = mongoDB!.options;
-        mongoose.connect(mongoDB!.uri, options ? options : { keepAlive: true }, (err) => err
+        mongoose.connect(mongoDB!.uri, options ? options : { keepAlive: true, directConnection: true }, (err) => err
             ? log("NoCliHandlerWarning", "warn", "Error connecting to MongoDB: " + err)
             : log("NoCliHandler", "info", "Connected to MongoDB"));
     }

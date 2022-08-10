@@ -21,10 +21,11 @@ class CommandHandler {
     _slashCommands;
     _validations = this.getValidations('run-time');
     constructor(instance, commandsDir, language) {
+        const { debug, defaultPrefix } = instance;
         this.commandsDir = commandsDir;
         this._suffix = language === "TypeScript" ? "ts" : "js";
-        this._debugging = instance.debug;
-        this._defaultPrefix = instance.defaultPrefix;
+        this._debugging = debug;
+        this._defaultPrefix = defaultPrefix;
         this._instance = instance;
         this._slashCommands = new SlashCommands_1.default(instance.client, this._debugging ? this._debugging.showFullErrorLog : undefined);
         this.readFiles();
@@ -101,42 +102,67 @@ class CommandHandler {
         const isOneOnly = this.commands.size === 1;
         (0, log_1.log)("NoCliHandler", "info", noCommands ? "No commands found" : `Loaded ${this.commands.size} command${isOneOnly ? "" : "s"}`);
     }
-    async runCommand(commandName, args, message, interaction) {
-        const command = this.commands.get(commandName);
-        if (!command) {
-            if (interaction)
-                interaction.reply({
-                    content: `This command is either deleted or is improperly registered`,
-                    ephemeral: true,
-                });
+    async runCommand(command, args, message, interaction) {
+        const { callback, type, cooldowns, deferReply = false, reply = false } = command.commandObject;
+        if (message && type === types_1.NoCliCommandType.Slash)
             return;
-        }
-        ;
+        const guild = message ? message.guild : interaction.guild;
+        const member = message ? message.member : interaction.member;
+        const user = message ? message.author : interaction.user;
         const usage = {
             client: this._instance.client,
             message,
             interaction,
             args,
             text: args.join(" "),
-            guild: message ? message.guild : interaction.guild,
-            member: message ? message.member : interaction.member,
-            user: message ? message.author : interaction.user,
+            guild,
+            member,
+            user,
             channel: message ? message.channel : interaction.channel,
+            cancelCooldown: () => { },
+            updateCooldown: () => { }
         };
-        if (message && command.commandObject.type === types_1.NoCliCommandType.Slash)
-            return;
         for (const validation of this._validations) {
+            // @ts-ignore
             const valid = await validation.then(validate => validate(command, usage, message ? this._defaultPrefix : '/'));
             if (!valid)
                 return;
         }
+        if (cooldowns) {
+            let cooldownType = 'global';
+            for (const type of types_1.cooldownTypesArray) {
+                if (cooldowns[type]) {
+                    cooldownType = type;
+                    break;
+                }
+            }
+            const cooldownUsage = {
+                cooldownType,
+                userId: user.id,
+                actionId: `command_${command.commandName}`,
+                guildId: guild?.id,
+                duration: cooldowns[cooldownType],
+                errorMessage: cooldowns.errorMessage,
+            };
+            const result = this._instance.cooldowns.canRunAction(cooldownUsage);
+            if (typeof result === 'string') {
+                return { response: result, reply };
+            }
+            await this._instance.cooldowns.start(cooldownUsage);
+            usage.cancelCooldown = () => {
+                this._instance.cooldowns.cancelCooldown(cooldownUsage);
+            };
+            usage.updateCooldown = (expires) => {
+                this._instance.cooldowns.updateCooldown(cooldownUsage, expires);
+            };
+        }
         try {
-            const { deferReply = false, callback, ephemeralReply = false, reply = false } = command.commandObject;
             if (deferReply)
                 interaction
-                    ? await interaction.deferReply({ ephemeral: ephemeralReply })
+                    ? await interaction.deferReply({ ephemeral: deferReply === "ephemeral" })
                     : await message.channel.sendTyping();
-            return { response: await callback(usage), deferReply, ephemeralReply, reply };
+            // @ts-ignore
+            return { response: await callback(usage), deferReply, reply };
         }
         catch (err) {
             const showFullErrorLog = this._debugging ? this._debugging.showFullErrorLog : false;
@@ -156,13 +182,17 @@ class CommandHandler {
                 .toLowerCase();
             if (!commandName)
                 return;
-            const res = await this.runCommand(commandName, args, message, null);
-            if (res) {
-                const { response, reply } = res;
-                reply
-                    ? message.reply(response).catch(() => { })
-                    : message.channel.send(response).catch(() => { });
-            }
+            const command = this.commands.get(commandName);
+            if (!command)
+                return;
+            const res = await this.runCommand(command, args, message, null);
+            if (!res)
+                return;
+            const { response, reply } = res;
+            if (reply)
+                message.reply(response).catch(() => { });
+            else
+                message.channel.send(response).catch(() => { });
         });
     }
     async interactionListener(client) {
@@ -170,15 +200,17 @@ class CommandHandler {
             if (!interaction.isChatInputCommand())
                 return;
             const args = interaction.options.data.map(({ value }) => String(value));
-            const res = await this.runCommand(interaction.commandName, args, null, interaction);
-            if (res) {
-                const { response, deferReply, ephemeralReply } = res;
-                deferReply
-                    ? interaction.followUp(response).catch(() => { })
-                    : typeof response === "string"
-                        ? interaction.reply({ content: response, ephemeral: ephemeralReply }).catch(() => { })
-                        : interaction.reply(response).catch(() => { });
-            }
+            const command = this.commands.get(interaction.commandName);
+            if (!command)
+                return;
+            const res = await this.runCommand(command, args, null, interaction);
+            if (!res)
+                return;
+            const { response, deferReply } = res;
+            if (deferReply)
+                interaction.followUp(response).catch(() => { });
+            else
+                interaction.reply(response).catch(() => { });
         });
     }
 }
