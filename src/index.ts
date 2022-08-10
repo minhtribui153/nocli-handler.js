@@ -39,7 +39,7 @@ class NoCliHandler {
     
     
     constructor(options: NoCliHandlerOptions) {
-        const { client, mongoDB, clientVersion, configuration, cooldownConfig = {}, debugging = {}, botOwners = [], testServers = [], language } = options;
+        const { client, mongoDB, clientVersion, configuration, cooldownConfig, debugging = {}, botOwners = [], testServers = [], language } = options;
         
         this._client = client;
         this._debugging = debugging;
@@ -47,7 +47,9 @@ class NoCliHandler {
         this._botOwners = botOwners;
         this._cooldowns = new Cooldowns({
             instance: this,
-            ...cooldownConfig
+            errorMessage: cooldownConfig?.defaultErrorMessage,
+            botOwnersBypass: cooldownConfig?.botOwnersBypass,
+            dbRequired: cooldownConfig?.dbRequired
         })
 
         if (configuration.defaultPrefix) this._defaultPrefix = configuration.defaultPrefix;
