@@ -1,4 +1,4 @@
-import { Channel, ApplicationCommandOptionData, Client, CommandInteraction, Guild, GuildMember, Message, TextBasedChannel, User, ApplicationCommandOptionType } from "discord.js";
+import { Channel, ApplicationCommandOptionData, Client, CommandInteraction, Guild, GuildMember, Message, TextBasedChannel, User, ApplicationCommandOptionType, AutocompleteInteraction, PermissionResolvable } from "discord.js";
 import { ConnectOptions } from "mongoose";
 import NoCliHandler from "..";
 import Command from "../command-handler/Command";
@@ -45,26 +45,6 @@ export type NoCliHandlerOptions = {
     botOwners?: string[];
     /** The language you are using to develop your Discord.JS Bot  */
     language: NoCliLanguageType;
-    /**
-     * Your Discord.JS Client Version.
-     * Pass the version of your Discord.JS Client like this:
-     * #### TypeScript
-     * ```typescript
-     * import DiscordJS from 'discord.js';
-     * ...
-     * clientVersion: DiscordJS.version,
-     * ...
-     * ```
-     * 
-     * #### JavaScript
-     * ```javascript
-     * const DiscordJS = require('discord.js');
-     * ...
-     * clientVersion: DiscordJS.version,
-     * ...
-     * ```
-     */
-    clientVersion: string;
 }
 
 // NoCliCooldown Reference:
@@ -99,6 +79,8 @@ export interface ICommand {
     delete?: boolean;
     /** Runs events inside a command */
     init?: (client: Client, instance: NoCliHandler) => void;
+    /** Handles autocomplete interaction for a Slash command */
+    autocomplete?: (interaction: AutocompleteInteraction, command: Command, args: string) => string[];
     /** The description of the command */
     description: string;
     /** The minimum amount of arguments for the command */
@@ -119,6 +101,8 @@ export interface ICommand {
     expectedArgs?: string;
     /** Defines the Slash Command option property for expectedArgs */
     expectedArgsTypes?: ApplicationCommandOptionType[];
+    /** The array of permissions the user that ran this command needs */
+    permissions?: PermissionResolvable[];
     /** Whether the command is for test guilds  */
     testOnly?: boolean;
     /** Whether the command only works only in guilds  */

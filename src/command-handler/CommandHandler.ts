@@ -1,5 +1,5 @@
 // Default import
-import { Client, CommandInteraction, Message, InteractionReplyOptions, GuildMember } from "discord.js";
+import { Client, CommandInteraction, Message, InteractionReplyOptions, GuildMember, InteractionType, AutocompleteInteraction } from "discord.js";
 import { cooldownTypesArray, CommandCallbackOptions, ICommand, NoCliCommandType, NoCliHandlerOptions, NoCliLanguageType, NoCliRuntimeValidationType, NoCliSyntaxValidationType, NoCliCommandCooldown, NoCliCooldownKeyOptions, NoCliCooldownType, NoCliCooldownOptions } from "../types";
 import { log } from "../functions/log";
 import getAllFiles from "../util/get-all-files";
@@ -190,6 +190,22 @@ class CommandHandler {
         }
     }
 
+    /** Handles autocomplete interaction */
+    private async handleAutocomplete(interaction: AutocompleteInteraction) {
+        const command = this.commands.get(interaction.commandName);
+        if (!command) return;
+
+        const { autocomplete } = command.commandObject
+        if (!autocomplete) return;
+
+        const focusedOption = interaction.options.getFocused(true);
+        const choices = await autocomplete(interaction, command, focusedOption.name);
+
+        const filtered = choices.filter((choice) => choice.toLowerCase().startsWith(focusedOption.value.toLowerCase()));
+
+        await interaction.respond(filtered.map(choice => ({ name: choice, value: choice })));
+    }
+
     private async messageListener(client: Client) {
         client.on("messageCreate", async (message) => {
             const { author, content } = message;
@@ -218,7 +234,12 @@ class CommandHandler {
     private async interactionListener(client: Client) {
         client.on("interactionCreate", async interaction => {
 
-            if (!interaction.isChatInputCommand()) return;
+            if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {
+                this.handleAutocomplete(interaction);
+                return
+            }
+
+            if (interaction.type !== InteractionType.ApplicationCommand) return;
 
             const args = interaction.options.data.map(({ value }) => String(value));
 

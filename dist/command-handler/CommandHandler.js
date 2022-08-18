@@ -3,6 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+// Default import
+const discord_js_1 = require("discord.js");
 const types_1 = require("../types");
 const log_1 = require("../functions/log");
 const get_all_files_1 = __importDefault(require("../util/get-all-files"));
@@ -169,6 +171,19 @@ class CommandHandler {
             (0, handle_error_1.default)(err, showFullErrorLog);
         }
     }
+    /** Handles autocomplete interaction */
+    async handleAutocomplete(interaction) {
+        const command = this.commands.get(interaction.commandName);
+        if (!command)
+            return;
+        const { autocomplete } = command.commandObject;
+        if (!autocomplete)
+            return;
+        const focusedOption = interaction.options.getFocused(true);
+        const choices = await autocomplete(interaction, command, focusedOption.name);
+        const filtered = choices.filter((choice) => choice.toLowerCase().startsWith(focusedOption.value.toLowerCase()));
+        await interaction.respond(filtered.map(choice => ({ name: choice, value: choice })));
+    }
     async messageListener(client) {
         client.on("messageCreate", async (message) => {
             const { author, content } = message;
@@ -197,7 +212,11 @@ class CommandHandler {
     }
     async interactionListener(client) {
         client.on("interactionCreate", async (interaction) => {
-            if (!interaction.isChatInputCommand())
+            if (interaction.type === discord_js_1.InteractionType.ApplicationCommandAutocomplete) {
+                this.handleAutocomplete(interaction);
+                return;
+            }
+            if (interaction.type !== discord_js_1.InteractionType.ApplicationCommand)
                 return;
             const args = interaction.options.data.map(({ value }) => String(value));
             const command = this.commands.get(interaction.commandName);

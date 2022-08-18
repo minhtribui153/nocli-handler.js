@@ -13,7 +13,7 @@ export * from "./errors/NoCliCommandError";
 export * from "./errors/NoCliHandlerError";
 
 // <---- IMPORTS ---->
-import DiscordJS, { Client, User, Team } from 'discord.js';
+import DiscordJS, { Client } from 'discord.js';
 import CommandHandler from "./command-handler/CommandHandler";
 import Cooldowns from './util/Cooldowns';
 import NoCliHandlerError from "./errors/NoCliHandlerError";
@@ -23,7 +23,6 @@ import { NoCliHandlerOptions } from "./types";
 import { log } from "./functions/log";
 import handleError from "./functions/handle-error";
 import showIntroBanner from './functions/show-intro-banner';
-import isCorrectVersion from './functions/is-correct-version';
 import Command from './command-handler/Command';
 
 class NoCliHandler {
@@ -39,7 +38,7 @@ class NoCliHandler {
     
     
     constructor(options: NoCliHandlerOptions) {
-        const { client, mongoDB, clientVersion, configuration, cooldownConfig, debugging = {}, botOwners = [], testServers = [], language } = options;
+        const { client, mongoDB, configuration, cooldownConfig, debugging = {}, botOwners = [], testServers = [], language } = options;
         
         this._client = client;
         this._debugging = debugging;
@@ -57,8 +56,6 @@ class NoCliHandler {
         
         try {
             if (this._showBanner) showIntroBanner(this._version)
-            if (!clientVersion) throw new NoCliHandlerError("Client version is required");
-            if (!isCorrectVersion(clientVersion)) throw new NoCliHandlerError("Please install Discord.JS version " + DiscordJS.version);
             if (!language || (language !== "JavaScript" && language !== "TypeScript")) throw new NoCliHandlerError("Invalid language specified");
             if (!client) throw new NoCliHandlerError("No client provided");
             client

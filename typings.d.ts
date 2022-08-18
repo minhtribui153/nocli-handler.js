@@ -1,4 +1,4 @@
-import { ApplicationCommand, ApplicationCommandOption, ApplicationCommandOptionData, GuildMember, Client, ClientApplication, Guild, Message, Channel, TextBasedChannel } from 'discord.js';
+import { ApplicationCommand, ApplicationCommandOption, CommandInteraction, PermissionResolvable, AutocompleteInteraction, ApplicationCommandOptionData, GuildMember, Client, ClientApplication, Guild, Message, Channel, TextBasedChannel } from 'discord.js';
 import mongoose, { ConnectOptions } from 'mongoose';
 import showBanner from 'node-banner';
 import chalk from 'chalk';
@@ -64,8 +64,9 @@ class CommandHandler {
 
     async importFile<T>(filePath: string): Promise<T>;
     async getValidations<T>(folder: string): Promise<T>[];
-    private async messageListener(client: Client);
-    private async interactionListener(client: Client);
+    private async handleAutocomplete(interaction: AutocompleteInteraction): Promise<void>;
+    private async messageListener(client: Client): Promise<void>;
+    private async interactionListener(client: Client): Promise<void>;
 }
 
 // src/command-handler/SlashCommands.ts
@@ -181,26 +182,6 @@ export type NoCliHandlerOptions = {
     botOwners?: string[];
     /** The language you are using to develop your Discord.JS Bot  */
     language: NoCliLanguageType;
-    /**
-     * Your Discord.JS Client Version.
-     * Pass the version of your Discord.JS Client like this:
-     * #### TypeScript
-     * ```typescript
-     * import DiscordJS from 'discord.js';
-     * ...
-     * clientVersion: DiscordJS.version,
-     * ...
-     * ```
-     * 
-     * #### JavaScript
-     * ```javascript
-     * const DiscordJS = require('discord.js');
-     * ...
-     * clientVersion: DiscordJS.version,
-     * ...
-     * ```
-     */
-    clientVersion: string;
 }
 
 // NoCliCooldown Reference:
@@ -235,6 +216,8 @@ export interface ICommand {
     delete?: boolean;
     /** Runs events inside a command */
     init?: (client: Client, instance: NoCliHandler) => void;
+    /** Handles autocomplete interaction for a Slash command */
+    autocomplete?: (interaction: AutocompleteInteraction, command: Command, args: string) => string[];
     /** The description of the command */
     description: string;
     /** The minimum amount of arguments for the command */
@@ -255,6 +238,8 @@ export interface ICommand {
     expectedArgs?: string;
     /** Defines the Slash Command option property for expectedArgs */
     expectedArgsTypes?: ApplicationCommandOptionType[];
+    /** The array of permissions the user that ran this command needs */
+    permissions?: PermissionResolvable[];
     /** Whether the command is for test guilds  */
     testOnly?: boolean;
     /** Whether the command only works only in guilds  */
