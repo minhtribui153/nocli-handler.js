@@ -13,6 +13,10 @@ const handle_error_1 = __importDefault(require("../functions/handle-error"));
 const SlashCommands_1 = __importDefault(require("./SlashCommands"));
 const path_1 = __importDefault(require("path"));
 const import_file_1 = __importDefault(require("../util/import-file"));
+const NoCliCommandError_1 = __importDefault(require("../errors/NoCliCommandError"));
+const ChannelCommands_1 = __importDefault(require("./ChannelCommands"));
+const CustomCommands_1 = __importDefault(require("./CustomCommands"));
+const DisabledCommands_1 = __importDefault(require("./DisabledCommands"));
 class CommandHandler {
     commands = new Map();
     commandsDir;
@@ -21,10 +25,18 @@ class CommandHandler {
     _defaultPrefix;
     _instance;
     _slashCommands;
+    _channelCommands = new ChannelCommands_1.default();
+    _customCommands = new CustomCommands_1.default(this);
+    _disabledCommands = new DisabledCommands_1.default();
     _validations = this.getValidations('run-time');
+    get channelCommands() { return this._channelCommands; }
+    get customCommands() { return this._customCommands; }
+    get slashCommands() { return this._slashCommands; }
+    get disabledCommands() { return this._disabledCommands; }
     constructor(instance, commandsDir, language) {
         const { debug, defaultPrefix } = instance;
         this.commandsDir = commandsDir;
+        this;
         this._suffix = language === "TypeScript" ? "ts" : "js";
         this._debugging = debug;
         this._defaultPrefix = defaultPrefix;
@@ -40,20 +52,26 @@ class CommandHandler {
         return validations;
     }
     async readFiles() {
+        const defaultCommands = (0, get_all_files_1.default)(path_1.default.join(__dirname, "./commands"));
+        // Separate default commands with other commands (for importing)
+        let commandsCount = 0;
         const validations = this.getValidations('syntax');
         const files = (0, get_all_files_1.default)(this.commandsDir);
-        for (const file of files) {
+        for (const file of [...defaultCommands, ...files]) {
             const commandProperty = file.split(/[/\\]/).pop().split(".");
             const commandName = commandProperty[0];
             const commandSuffix = commandProperty[1];
             if (commandSuffix !== this._suffix)
                 continue;
             try {
-                const commandObject = this._suffix === "js"
+                const commandObject = this._suffix === "js" && commandsCount > defaultCommands.length
                     ? require(file)
                     : await (0, import_file_1.default)(file);
-                const { type: commandType, testOnly, description, delete: del, aliases = [], init = () => { } } = commandObject;
-                if (del) {
+                let { type: commandType, testOnly, description, delete: del, aliases = [], init = () => { } } = commandObject;
+                if (typeof commandType === "string" && types_1.NoCliCommandTypeArray.includes(commandType))
+                    commandType = types_1.NoCliCommandType[commandType];
+                const command = new Command_1.default(this._instance, commandName, commandObject, { isDefaultCommand: commandsCount < defaultCommands.length });
+                if (del || (this._instance.disabledDefaultCommands.includes(commandName.toLowerCase()) && command.isDefaultCommand)) {
                     if (testOnly) {
                         for (const guildId of this._instance.testServers) {
                             this._slashCommands.delete(commandName, guildId);
@@ -62,10 +80,9 @@ class CommandHandler {
                     else {
                         this._slashCommands.delete(commandName);
                     }
-                    continue;
+                    return;
                 }
                 ;
-                const command = new Command_1.default(this._instance, commandName, commandObject);
                 for (const validation of validations) {
                     validation
                         .then((validate) => validate(command))
@@ -88,9 +105,13 @@ class CommandHandler {
                         this._slashCommands.create(commandName, description, options ?? []);
                 }
                 if (commandType !== types_1.NoCliCommandType.Slash) {
-                    const names = [command.commandName, ...aliases];
-                    for (const name of names)
-                        this.commands.set(name, command);
+                    const names = aliases;
+                    // Sets a new Command for an alias
+                    for (const name of names) {
+                        const aliasCommand = new Command_1.default(this._instance, commandName, commandObject, { isAlias: true });
+                        this.commands.set(name, aliasCommand);
+                    }
+                    ;
                 }
             }
             catch (err) {
@@ -99,6 +120,7 @@ class CommandHandler {
                     : false;
                 (0, handle_error_1.default)(err, showFullErrorLog, commandName);
             }
+            commandsCount += 1;
         }
         const noCommands = this.commands.size === 0;
         const isOneOnly = this.commands.size === 1;
@@ -111,7 +133,10 @@ class CommandHandler {
         const guild = message ? message.guild : interaction.guild;
         const member = message ? message.member : interaction.member;
         const user = message ? message.author : interaction.user;
+        const channel = message ? message.channel : interaction.channel;
+        const options = interaction ? interaction.options : null;
         const usage = {
+            instance: command.instance,
             client: this._instance.client,
             message,
             interaction,
@@ -120,13 +145,14 @@ class CommandHandler {
             guild,
             member,
             user,
-            channel: message ? message.channel : interaction.channel,
+            channel,
+            options,
             cancelCooldown: () => { },
             updateCooldown: () => { }
         };
         for (const validation of this._validations) {
             // @ts-ignore
-            const valid = await validation.then(validate => validate(command, usage, message ? this._defaultPrefix : '/'));
+            const valid = await validation.then(async (validate) => await validate(command, usage, message ? this._defaultPrefix : '/'));
             if (!valid)
                 return;
         }
@@ -181,8 +207,24 @@ class CommandHandler {
             return;
         const focusedOption = interaction.options.getFocused(true);
         const choices = await autocomplete(interaction, command, focusedOption.name);
+        for (const choice of choices) {
+            if (typeof choice !== "string")
+                throw new NoCliCommandError_1.default("Some autocomplete options are not a string");
+        }
         const filtered = choices.filter((choice) => choice.toLowerCase().startsWith(focusedOption.value.toLowerCase()));
-        await interaction.respond(filtered.map(choice => ({ name: choice, value: choice })));
+        const editedFilter = [];
+        let counter = 0;
+        if (filtered.length > 25) {
+            filtered.forEach(value => {
+                if (counter === 25)
+                    return;
+                counter += 1;
+                return editedFilter.push(value);
+            });
+        }
+        else
+            editedFilter.push(...filtered);
+        await interaction.respond(editedFilter.map(choice => ({ name: choice, value: choice })));
     }
     async messageListener(client) {
         client.on("messageCreate", async (message) => {
@@ -198,8 +240,11 @@ class CommandHandler {
             if (!commandName)
                 return;
             const command = this.commands.get(commandName);
-            if (!command)
+            if (!command) {
+                this._customCommands.run(commandName, message);
                 return;
+            }
+            ;
             const res = await this.runCommand(command, args, message, null);
             if (!res)
                 return;
@@ -213,15 +258,23 @@ class CommandHandler {
     async interactionListener(client) {
         client.on("interactionCreate", async (interaction) => {
             if (interaction.type === discord_js_1.InteractionType.ApplicationCommandAutocomplete) {
-                this.handleAutocomplete(interaction);
+                this.handleAutocomplete(interaction).catch((err) => {
+                    if (err.name !== "NoCliCommandError")
+                        return;
+                    const showFullErrorLog = this._debugging ? this._debugging.showFullErrorLog : false;
+                    (0, handle_error_1.default)(err, showFullErrorLog);
+                });
                 return;
             }
             if (interaction.type !== discord_js_1.InteractionType.ApplicationCommand)
                 return;
             const args = interaction.options.data.map(({ value }) => String(value));
             const command = this.commands.get(interaction.commandName);
-            if (!command)
+            if (!command) {
+                this._customCommands.run(interaction.commandName, undefined, interaction);
                 return;
+            }
+            ;
             const res = await this.runCommand(command, args, null, interaction);
             if (!res)
                 return;

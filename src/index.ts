@@ -13,43 +13,66 @@ export * from "./errors/NoCliCommandError";
 export * from "./errors/NoCliHandlerError";
 
 // <---- IMPORTS ---->
-import DiscordJS, { Client } from 'discord.js';
+import { Client } from 'discord.js';
 import CommandHandler from "./command-handler/CommandHandler";
 import Cooldowns from './util/Cooldowns';
 import NoCliHandlerError from "./errors/NoCliHandlerError";
 import mongoose from 'mongoose';
 
-import { NoCliHandlerOptions } from "./types";
+import { DebugOptions, MongoDBConnection, MongoDBResult, NoCliEmojiConfigOptions, NoCliEmojiOptions, NoCliHandlerOptions } from "./types";
 import { log } from "./functions/log";
 import handleError from "./functions/handle-error";
 import showIntroBanner from './functions/show-intro-banner';
 import Command from './command-handler/Command';
 
 class NoCliHandler {
-    private _version: string = 'v1.0.9';
-    private _testServers: string[] = [];
-    private _botOwners: string[] = [];
+    private _version: string = 'v1.1.1';
+    private _defaultPrefix: string = "!";
+    private _testServers: string[];
+    private _botOwners: string[];
+    private _disabledDefaultCommands: string[];
+    private _mongoDBConnection: MongoDBResult = { connected: false, errMessage: "MongoDB URI not found" };
     private _showBanner: boolean = true;
     private _commands: Map<string, Command> = new Map();
+    private _commandHandler?: CommandHandler;
+    private _emojiConfig: NoCliEmojiOptions;
     private _cooldowns: Cooldowns;
-    private _defaultPrefix: string = "!";
-    private _debugging: NoCliHandlerOptions["debugging"];
+    private _debugging: DebugOptions;
     private _client: Client;
     
     
     constructor(options: NoCliHandlerOptions) {
-        const { client, mongoDB, configuration, cooldownConfig, debugging = {}, botOwners = [], testServers = [], language } = options;
-        
+        const {
+            botOwners = [],
+            client,
+            configuration,
+            cooldownConfig,
+            debugging = {},
+            emojiConfig = {},
+            language,
+            mongoDB,
+            testServers = [],
+            disabledDefaultCommands = []
+        } = options;
+
         this._client = client;
         this._debugging = debugging;
         this._testServers = testServers;
+        this._emojiConfig = {
+            success: emojiConfig.success || "",
+            info: emojiConfig.info || "",
+            enabled: emojiConfig.enabled || "",
+            disabled: emojiConfig.disabled || "",
+            error: emojiConfig.error || ""
+        };
+        this._disabledDefaultCommands = disabledDefaultCommands.map(cmd => cmd.toLowerCase());
         this._botOwners = botOwners;
         this._cooldowns = new Cooldowns({
             instance: this,
             errorMessage: cooldownConfig?.defaultErrorMessage,
             botOwnersBypass: cooldownConfig?.botOwnersBypass,
             dbRequired: cooldownConfig?.dbRequired
-        })
+        });
 
         if (configuration.defaultPrefix) this._defaultPrefix = configuration.defaultPrefix;
         if (debugging && debugging.showBanner !== undefined) this._showBanner = debugging.showBanner;
@@ -63,9 +86,12 @@ class NoCliHandler {
                 .on("ready", async client => {
                     log("NoCliHandler", "info", `Your bot ${client.user.tag} is up and running`)
                     if (!botOwners.length) {
+                        // Fetch
                         await client.application.fetch();
-                        const { owner } = client.application;
+                        await client.guilds.fetch();
 
+                        const { owner } = client.application;
+                        
                         if (owner) {
                             // @ts-ignore
                             if (owner.members !== undefined) {
@@ -79,14 +105,17 @@ class NoCliHandler {
                             }
                         }
                     }
+
+                    this._mongoDBConnection = await this.connectToMongoDB(mongoDB);
+
+                    this.mongoDBConnection.connected
+                        ? log('MongoDBInstance', "info", 'Connected to Database')
+                        : log('MongoDBInstance', "warn", this.mongoDBConnection.errMessage!);
+
                     if (configuration.commandsDir) {
-                        const commandHandlerInstance = new CommandHandler(this, configuration.commandsDir, language);
-                        this._commands = commandHandlerInstance.commands;
-                    } else log("NoCliHandlerWarning", "warn", "No commands directory provided, you will have to handle the commands yourself");
-                    
-                    mongoDB !== undefined
-                        ? this.connectToMongoDB(mongoDB)
-                        : log("NoCliHandlerWarning", "warn", "MongoDB URI not found. Some features will not work!");
+                        this._commandHandler = new CommandHandler(this, configuration.commandsDir, language);
+                        this._commands = this._commandHandler.commands;
+                    } else log("CommandHandlerWarning", "warn", "No commands directory provided, you will have to handle the commands yourself");
                 });
         } catch (err) {
             const error = err as any;
@@ -98,19 +127,26 @@ class NoCliHandler {
         }
     }
     
-    public get client(): NoCliHandlerOptions["client"] { return this._client }
+    public get client(): Client { return this._client }
     public get testServers(): string[] { return this._testServers }
     public get botOwners(): string[] { return this._botOwners }
+    public get disabledDefaultCommands(): string[] { return this._disabledDefaultCommands }
     public get defaultPrefix(): string { return this._defaultPrefix }
-    public get debug() { return this._debugging }
+    public get debug(): DebugOptions | undefined { return this._debugging }
+    public get commandHandler(): CommandHandler | undefined { return this._commandHandler }
     public get commands(): Map<string, Command> | undefined { return this._commands }
+    public get emojiConfig(): NoCliEmojiConfigOptions { return this._emojiConfig }
     public get cooldowns(): Cooldowns { return this._cooldowns }
+    public get mongoDBConnection(): MongoDBResult { return this._mongoDBConnection }
 
-    private connectToMongoDB(mongoDB: NoCliHandlerOptions["mongoDB"]) {
-        const options = mongoDB!.options;
-        mongoose.connect(mongoDB!.uri, options ? options : { keepAlive: true, directConnection: true }, (err) => err
-            ? log("NoCliHandlerWarning", "warn", "Error connecting to MongoDB: " + err)
-            : log("NoCliHandler", "info", "Connected to MongoDB"));
+    private async connectToMongoDB(mongoDB?: MongoDBConnection): Promise<MongoDBResult> {
+        return new Promise((resolve) =>
+            mongoDB
+                ? mongoose.connect(mongoDB.uri, mongoDB.options ? mongoDB.options : { keepAlive: true, directConnection: true }, (err) => err
+                    ? resolve({ connected: false, errMessage: err.message })
+                    : resolve({ connected: true }))
+                : resolve({ connected: false, errMessage: "MongoDB URI not found" })
+        );
     }
 }
 export default NoCliHandler;

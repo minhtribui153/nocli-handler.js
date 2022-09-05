@@ -1,6 +1,6 @@
 {
   "name": "nocli-handler.js",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Next generation Discord.JS Handler for future Discord Bots",
   "main": "./dist/index.js",
   "typings": "./typings.d.ts",
@@ -20,7 +20,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "chalk": "^2.4.1",
-    "discord.js": "^14.2.0",
+    "discord.js": "^14.3.0",
     "mongoose": "^6.3.5",
     "node-banner": "^1.4.0"
   },

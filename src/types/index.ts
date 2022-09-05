@@ -1,4 +1,4 @@
-import { Channel, ApplicationCommandOptionData, Client, CommandInteraction, Guild, GuildMember, Message, TextBasedChannel, User, ApplicationCommandOptionType, AutocompleteInteraction, PermissionResolvable } from "discord.js";
+import { Channel, ApplicationCommandOptionData, Client, CommandInteraction, Guild, GuildMember, Message, TextBasedChannel, User, ApplicationCommandOptionType, AutocompleteInteraction, PermissionResolvable, CommandInteractionOptionResolver } from "discord.js";
 import { ConnectOptions } from "mongoose";
 import NoCliHandler from "..";
 import Command from "../command-handler/Command";
@@ -11,48 +11,69 @@ export type NoCliHandlerOptions = {
     /** The Discord.JS Client you initialized */
     client: Client;
     /** Connects to MongoDB */
-    mongoDB?: {
-        /** The MongoDB URI */
-        uri: string;
-        /** The MongoDB options (optional) */
-        options?: ConnectOptions;
-    }
-    configuration: {
-        /** The default prefix for the bot (default prefix = "!") */
-        defaultPrefix?: string;
-        /** The directory where the commands are stored */
-        commandsDir?: string;
-        /** The directory where the features are stored */
-        featuresDir?: string;
-    };
-    debugging?: {
-        /** Whether or not to show the full error log */
-        showFullErrorLog?: boolean;
-        /** Whether or not to show the banner upon the start of the program  */
-        showBanner?: boolean;
-    };
-    cooldownConfig?: {
-        /** Sets the default error message for cooldowns, if any */
-        defaultErrorMessage?: string;
-        /** Whether to allow bot owners to bypass cooldowns */
-        botOwnersBypass?: boolean;
-        /** If a command cooldown exceeds the current cooldown limit set for this option, they will be stored in a MongoDB database ()  */
-        dbRequired: number;
-    };
+    mongoDB?: MongoDBConnection;
+    /** The Bot Configuration */
+    configuration: ConfigOptions;
+    /** The Environment Configuration */
+    debugging?: DebugOptions;
+    /** The options for cooldowns */
+    cooldownConfig?: NoCliCooldownConfigOptions;
+    /** Sets the default emojis for messages sent from the command handler */
+    emojiConfig?: NoCliEmojiConfigOptions;
     /** The test guilds `testonly` commands can only work in  */
     testServers?: string[];
     /** The array of Discord ID of bot owners */
     botOwners?: string[];
+    /** The default commands from the command handler to disable when the bot starts */
+    disabledDefaultCommands?: string[];
     /** The language you are using to develop your Discord.JS Bot  */
     language: NoCliLanguageType;
 }
 
-// NoCliCooldown Reference:
 export type NoCliCooldownOptions = {
     instance: NoCliHandler;
-    errorMessage?: string | undefined;
-    botOwnersBypass?: boolean | undefined;
-    dbRequired?: number | undefined;
+    errorMessage?: string;
+    botOwnersBypass?: boolean;
+    dbRequired?: number;
+}
+
+
+// NoCliHandler Options Reference
+export type NoCliCooldownConfigOptions = {
+    /** Sets the default error message for cooldowns, if any */
+    defaultErrorMessage?: string;
+    /** Whether to allow bot owners to bypass cooldowns */
+    botOwnersBypass?: boolean;
+    /** If a command cooldown exceeds the current cooldown limit set for this option, they will be stored in a MongoDB database  */
+    dbRequired?: number;
+}
+
+export type MongoDBConnection = {
+    /** The MongoDB URI */
+    uri: string;
+    /** The MongoDB options (optional) */
+    options?: ConnectOptions;
+}
+
+export type MongoDBResult = {
+    connected: boolean;
+    errMessage?: any;
+}
+
+export type DebugOptions = {
+    /** Whether or not to show the full error log */
+    showFullErrorLog?: boolean;
+    /** Whether or not to show the banner upon the start of the program  */
+    showBanner?: boolean;
+}
+
+export type ConfigOptions = {
+    /** The default prefix for the bot (default prefix = "!") */
+    defaultPrefix?: string;
+    /** The directory where the commands are stored */
+    commandsDir?: string;
+    /** The directory where the features are stored */
+    featuresDir?: string;
 }
 
 export type NoCliCooldownKeyOptions = {
@@ -62,6 +83,22 @@ export type NoCliCooldownKeyOptions = {
     guildId?: string;
     duration?: string | number;
     errorMessage?: string;
+}
+
+export type NoCliEmojiConfigOptions = {
+    success?: string;
+    error?: string;
+    info?: string;
+    enabled?: string;
+    disabled?: string;
+}
+
+export type NoCliEmojiOptions = {
+    success: string;
+    error: string;
+    info: string;
+    enabled: string;
+    disabled: string;
 }
 
 export type NoCliRuntimeValidationType = (command: Command, usage: CommandCallbackOptions, prefix: string) => boolean;
@@ -74,13 +111,13 @@ export type NoCliCooldownType = typeof cooldownTypesArray[number];
 // Command Reference:
 export interface ICommand {
     /** Sets the command type */
-    type: NoCliCommandType;
+    type: NoCliCommandType | NoCliCommandTypeString;
     /** Tells the command handler whether to disable this command from interaction with the guilds */
     delete?: boolean;
     /** Runs events inside a command */
     init?: (client: Client, instance: NoCliHandler) => void;
     /** Handles autocomplete interaction for a Slash command */
-    autocomplete?: (interaction: AutocompleteInteraction, command: Command, args: string) => string[];
+    autocomplete?: (interaction: AutocompleteInteraction, command: Command, args: string) => string[] | Promise<string[]>;
     /** The description of the command */
     description: string;
     /** The minimum amount of arguments for the command */
@@ -114,7 +151,7 @@ export interface ICommand {
     /** Tells the command handler whether to tell the bot to reply or send channel message (only works for Legacy Commands) */
     reply?: boolean;
     /** The command cooldowns */
-    cooldowns: NoCliCommandCooldown;
+    cooldowns?: NoCliCommandCooldown;
     /** 
      * The Discord.JS arguments (only works for Slash Commands)
      * Specify this if you are used to handle Discord.JS arguments with Slash Commands.
@@ -126,13 +163,22 @@ export interface ICommand {
     aliases?: string[];
 }
 
+export type CommandOptions = {
+    isAlias?: boolean;
+    isDefaultCommand?: boolean;
+}
+
 export type CommandCallbackOptions = {
+    /** The NoCliHandler Instance */
+    instance: NoCliHandler;
     /** The Discord.JS Client Instance */
     client: Client;
     /** The Discord.JS Message Instance */
     message: Message | null;
     /** The Discord.JS CommandInteraction Instance  */
     interaction: CommandInteraction | null;
+    /** The Discord.JS CommandInteractionOptionResolber Instance */
+    options: CommandInteractionOptionResolver | null;
     /** The arguments passed to the command */
     args: string[];
     /** The arguments combined into a string */
@@ -164,8 +210,13 @@ export type NoCliCommandCooldown = {
     errorMessage?: string;
 }
 
+
 export enum NoCliCommandType {
     Slash = 0,
     Legacy = 1,
     Both = 2
 };
+
+export const NoCliCommandTypeArray = Object.keys(NoCliCommandType);
+
+export type NoCliCommandTypeString = keyof typeof NoCliCommandType;

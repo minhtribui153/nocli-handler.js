@@ -6,11 +6,11 @@ export default (command: Command, usage: CommandCallbackOptions, prefix: string)
     const { length } = usage.args;
     
     if ((length < minArgs) || (length > maxArgs && maxArgs !== -1)) {
-        let text = `Invalid Syntax! Correct Syntax: \`${prefix}${command.commandName} ${expectedArgs}\``
+        let text = `${command.instance.emojiConfig.error} Invalid Syntax! Correct Syntax: \`${prefix}${command.commandName} ${expectedArgs}\``
             .replace("[PREFIX]", prefix)
             .replace("[ARGS]", expectedArgs)
         if (correctSyntax && correctSyntax.length > 0) {
-            text = correctSyntax.replace("[PREFIX]", prefix).replace("[ARGS]", expectedArgs);
+            text = `${command.instance.emojiConfig.error} ` + correctSyntax.replace("[PREFIX]", prefix).replace("[ARGS]", expectedArgs);
         }
 
         const { message, interaction } = usage;

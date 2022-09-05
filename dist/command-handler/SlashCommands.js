@@ -31,6 +31,16 @@ class SlashCommands {
         await commands.fetch();
         return commands;
     }
+    async findCommand(commandId, guildId) {
+        const commands = await this.getCommands(guildId);
+        const command = commands.cache.get(commandId);
+        return command;
+    }
+    /**
+     * Checks if the new slash command option and the old one are different
+     * @param {ApplicationCommandOption[]} existingOptions The current slash command options.
+     * @param {ApplicationCommandOptionData[]} options The new slash command options.
+     */
     optionsAreDifferent(existingOptions, options) {
         for (let i = 0; i < options.length; ++i) {
             const option = options[i];

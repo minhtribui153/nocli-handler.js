@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.NoCliCommandType = exports.cooldownTypesArray = void 0;
+exports.NoCliCommandTypeArray = exports.NoCliCommandType = exports.cooldownTypesArray = void 0;
 // Arrays
 exports.cooldownTypesArray = ['perUser', 'perUserPerGuild', 'perGuild', 'global'];
 var NoCliCommandType;
@@ -10,3 +10,4 @@ var NoCliCommandType;
     NoCliCommandType[NoCliCommandType["Both"] = 2] = "Both";
 })(NoCliCommandType = exports.NoCliCommandType || (exports.NoCliCommandType = {}));
 ;
+exports.NoCliCommandTypeArray = Object.keys(NoCliCommandType);

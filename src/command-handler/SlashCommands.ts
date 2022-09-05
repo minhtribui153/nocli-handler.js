@@ -16,8 +16,8 @@ class SlashCommands {
      * Gets the Slash commands based on the guild ID.
      * @param guildId The guild id (optional)
      */
-    async getCommands(guildId?: string): Promise<ApplicationCommandManager | GuildApplicationCommandManager> {
-        let commands: ApplicationCommandManager | GuildApplicationCommandManager;
+    async getCommands(guildId?: string | null): Promise<ApplicationCommandManager | GuildApplicationCommandManager> {
+        let commands;
         if (guildId) {
             const guild = await this._client.guilds.fetch(guildId);
             commands = guild.commands;
@@ -31,6 +31,19 @@ class SlashCommands {
         return commands;
     }
 
+    async findCommand(commandId: string, guildId?: string): Promise<ApplicationCommand<{}> | undefined> {
+        const commands = await this.getCommands(guildId);
+
+        const command = commands.cache.get(commandId);
+
+        return command;
+    }
+
+    /**
+     * Checks if the new slash command option and the old one are different
+     * @param {ApplicationCommandOption[]} existingOptions The current slash command options.
+     * @param {ApplicationCommandOptionData[]} options The new slash command options.
+     */
     optionsAreDifferent(existingOptions: ApplicationCommandOption[], options: ApplicationCommandOptionData[]): boolean {
         for (let i = 0; i < options.length; ++i) {
             const option = options[i];

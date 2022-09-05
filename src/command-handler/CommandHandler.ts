@@ -1,6 +1,6 @@
 // Default import
-import { Client, CommandInteraction, Message, InteractionReplyOptions, GuildMember, InteractionType, AutocompleteInteraction } from "discord.js";
-import { cooldownTypesArray, CommandCallbackOptions, ICommand, NoCliCommandType, NoCliHandlerOptions, NoCliLanguageType, NoCliRuntimeValidationType, NoCliSyntaxValidationType, NoCliCommandCooldown, NoCliCooldownKeyOptions, NoCliCooldownType, NoCliCooldownOptions } from "../types";
+import { Client, CommandInteraction, Message, GuildMember, InteractionType, AutocompleteInteraction, CommandInteractionOptionResolver } from "discord.js";
+import { cooldownTypesArray, CommandCallbackOptions, ICommand, NoCliCommandType, NoCliHandlerOptions, NoCliLanguageType, NoCliRuntimeValidationType, NoCliSyntaxValidationType, NoCliCommandCooldown, NoCliCooldownKeyOptions, NoCliCooldownType, NoCliCooldownOptions, NoCliCommandTypeArray, MongoDBResult, DebugOptions } from "../types";
 import { log } from "../functions/log";
 import getAllFiles from "../util/get-all-files";
 import NoCliHandler from "..";
@@ -9,7 +9,10 @@ import handleError from "../functions/handle-error";
 import SlashCommands from "./SlashCommands";
 import path from "path";
 import importFile from "../util/import-file";
-
+import NoCliCommandError from "../errors/NoCliCommandError";
+import ChannelCommands from "./ChannelCommands";
+import CustomCommands from "./CustomCommands";
+import DisabledCommands from "./DisabledCommands";
 
 class CommandHandler {
     public commands: Map<string, Command> = new Map();
@@ -20,12 +23,20 @@ class CommandHandler {
     private _defaultPrefix: string;
     private _instance: NoCliHandler;
     private _slashCommands: SlashCommands;
+    private _channelCommands: ChannelCommands = new ChannelCommands();
+    private _customCommands: CustomCommands = new CustomCommands(this);
+    private _disabledCommands = new DisabledCommands();
     private _validations = this.getValidations<NoCliRuntimeValidationType>('run-time');
 
+    public get channelCommands() { return this._channelCommands }
+    public get customCommands() { return this._customCommands }
+    public get slashCommands() { return this._slashCommands }
+    public get disabledCommands() { return this._disabledCommands }
 
     constructor(instance: NoCliHandler, commandsDir: string, language: NoCliLanguageType) {
         const { debug, defaultPrefix } = instance;
         this.commandsDir = commandsDir;
+        this
         this._suffix = language === "TypeScript" ? "ts" : "js";
         this._debugging = debug;
         this._defaultPrefix = defaultPrefix;
@@ -44,10 +55,13 @@ class CommandHandler {
     }
 
     private async readFiles() {
+        const defaultCommands = getAllFiles(path.join(__dirname, "./commands"))
+        // Separate default commands with other commands (for importing)
+        let commandsCount = 0
         const validations = this.getValidations<NoCliSyntaxValidationType>('syntax');
         const files = getAllFiles(this.commandsDir);
 
-        for (const file of files) {
+        for (const file of [...defaultCommands, ...files]) {
             const commandProperty = file.split(/[/\\]/).pop()!.split(".");
             const commandName = commandProperty[0];
             const commandSuffix = commandProperty[1];
@@ -55,13 +69,17 @@ class CommandHandler {
             if (commandSuffix !== this._suffix) continue;
             
             try {
-                const commandObject = this._suffix === "js"
+                const commandObject = this._suffix === "js" && commandsCount > defaultCommands.length
                     ? require(file) as ICommand
                     : await importFile<ICommand>(file);
 
-                const { type: commandType, testOnly, description, delete: del, aliases = [], init = () => {} } = commandObject;
+                let { type: commandType, testOnly, description, delete: del, aliases = [], init = () => {} } = commandObject;
 
-                if (del) {
+                if (typeof commandType === "string" && NoCliCommandTypeArray.includes(commandType)) commandType = NoCliCommandType[commandType];
+
+                const command = new Command(this._instance, commandName, commandObject, { isDefaultCommand: commandsCount < defaultCommands.length });
+
+                if (del || (this._instance.disabledDefaultCommands.includes(commandName.toLowerCase()) && command.isDefaultCommand)) {
                     if (testOnly) {
                         for (const guildId of this._instance.testServers) {
                             this._slashCommands.delete(commandName, guildId);
@@ -69,9 +87,10 @@ class CommandHandler {
                     } else {
                         this._slashCommands.delete(commandName)
                     }
-                    continue
+
+
+                    return;
                 };
-                const command = new Command(this._instance, commandName, commandObject);
 
                 for (const validation of validations) {
                     validation
@@ -97,8 +116,12 @@ class CommandHandler {
                 }
 
                 if (commandType !== NoCliCommandType.Slash) {
-                    const names = [command.commandName, ...aliases];
-                    for (const name of names) this.commands.set(name, command);
+                    const names = aliases;
+                    // Sets a new Command for an alias
+                    for (const name of names) {
+                        const aliasCommand = new Command(this._instance, commandName, commandObject, { isAlias: true });
+                        this.commands.set(name, aliasCommand)
+                    };
                 }
             } catch (err) {
                 const showFullErrorLog = this._debugging
@@ -107,6 +130,7 @@ class CommandHandler {
 
                 handleError(err, showFullErrorLog, commandName);
             }
+            commandsCount += 1
         }
         const noCommands = this.commands.size === 0;
         const isOneOnly = this.commands.size === 1;
@@ -121,8 +145,11 @@ class CommandHandler {
         const guild = message ? message.guild : interaction!.guild;
         const member = message ? message.member : interaction!.member as GuildMember;
         const user = message ? message.author : interaction!.user;
+        const channel = message ? message.channel : interaction!.channel
+        const options = interaction ? interaction.options as CommandInteractionOptionResolver : null;
 
         const usage: CommandCallbackOptions = {
+            instance: command.instance,
             client: this._instance.client,
             message,
             interaction,
@@ -131,14 +158,15 @@ class CommandHandler {
             guild,
             member,
             user,
-            channel: message ? message.channel : interaction!.channel,
-            cancelCooldown: () => {},
-            updateCooldown: () => {}
+            channel,
+            options,
+            cancelCooldown: () => { },
+            updateCooldown: () => { }
         };
 
         for (const validation of this._validations) {
             // @ts-ignore
-            const valid = await validation.then(validate => validate(command, usage, message ? this._defaultPrefix : '/'));
+            const valid = await validation.then(async validate => await validate(command, usage, message ? this._defaultPrefix : '/'));
             if (!valid) return;
         }
 
@@ -201,9 +229,24 @@ class CommandHandler {
         const focusedOption = interaction.options.getFocused(true);
         const choices = await autocomplete(interaction, command, focusedOption.name);
 
+        for (const choice of choices) {
+            if (typeof choice !== "string") throw new NoCliCommandError("Some autocomplete options are not a string");
+        }
+
         const filtered = choices.filter((choice) => choice.toLowerCase().startsWith(focusedOption.value.toLowerCase()));
 
-        await interaction.respond(filtered.map(choice => ({ name: choice, value: choice })));
+        const editedFilter = []
+        let counter = 0
+
+        if (filtered.length > 25) {
+            filtered.forEach(value => {
+                if (counter === 25) return;
+                counter += 1;
+                return editedFilter.push(value);
+            })
+        } else editedFilter.push(...filtered)
+
+        await interaction.respond(editedFilter.map(choice => ({ name: choice, value: choice })));
     }
 
     private async messageListener(client: Client) {
@@ -216,10 +259,14 @@ class CommandHandler {
             const commandName = args.shift()
                 ?.substring(this._defaultPrefix.length)
                 .toLowerCase();
+            
             if (!commandName) return;
 
             const command = this.commands.get(commandName);
-            if (!command) return;
+            if (!command) {
+                this._customCommands.run(commandName, message);
+                return
+            };
             
             const res = await this.runCommand(command, args, message, null);
             if (!res) return;
@@ -235,7 +282,11 @@ class CommandHandler {
         client.on("interactionCreate", async interaction => {
 
             if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {
-                this.handleAutocomplete(interaction);
+                this.handleAutocomplete(interaction).catch((err) => {
+                    if (err.name !== "NoCliCommandError") return;
+                    const showFullErrorLog = this._debugging ? this._debugging.showFullErrorLog : false;
+                    handleError(err as any, showFullErrorLog);
+                });
                 return
             }
 
@@ -244,7 +295,10 @@ class CommandHandler {
             const args = interaction.options.data.map(({ value }) => String(value));
 
             const command = this.commands.get(interaction.commandName);
-            if (!command) return;
+            if (!command) {
+                this._customCommands.run(interaction.commandName, undefined, interaction);
+                return;
+            };
 
             const res = await this.runCommand(command, args, null, interaction);
             if (!res) return;

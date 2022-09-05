@@ -6,7 +6,7 @@ export default (command: Command, usage: CommandCallbackOptions, prefix: string)
     const { guild, message, interaction } = usage;
 
     if (guildOnly && !guild) {
-        const text = "This command can only be ran within a server.";
+        const text = `${command.instance.emojiConfig.error} This command can only be ran within a server`;
 
         if (message) message.reply(text);
         else if (interaction) interaction.reply({ content: text, ephemeral: true });
