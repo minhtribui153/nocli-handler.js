@@ -1,4 +1,4 @@
-import { ApplicationCommand, ApplicationCommandOption, CommandInteraction, PermissionResolvable, AutocompleteInteraction, ApplicationCommandOptionData, GuildMember, Client, ClientApplication, Guild, Message, Channel, TextBasedChannel, CommandInteractionOptionResolver } from 'discord.js';
+import { ApplicationCommand, ApplicationCommandOption, GuildTextBasedChannel, CommandInteraction, PermissionResolvable, AutocompleteInteraction, ApplicationCommandOptionData, GuildMember, Client, ClientApplication, Guild, Message, GuildChannel, CommandInteractionOptionResolver } from 'discord.js';
 import mongoose, { ConnectOptions } from 'mongoose';
 import showBanner from 'node-banner';
 import chalk from 'chalk';
@@ -83,7 +83,7 @@ class CommandHandler {
     private _slashCommands: SlashCommands;
     private _channelCommands: ChannelCommands;
     private _customCommands: CustomCommands;
-    private _disabledCommands;
+    private _disabledCommands: DisabledCommands;
     private _validations: Promise<NoCliRuntimeValidationType>[];
 
     public get channelCommands(): ChannelCommands;
@@ -201,7 +201,7 @@ class NoCliHandlerError extends Error {
 export const handleCommandAutocomplete = (commands: Map<string, Command>, guildId?: string | null | undefined, defaultCommands: boolean = false): string[] => {};
 
 // src/functions/handle-error.ts
-export default (error: any, showFullErrorLog: boolean | undefined, command?: string): never => {}
+export const handleError = (error: any, showFullErrorLog: boolean | undefined, command?: string): never => {}
 
 // src/functions/log.ts
 export type NoCliLogType = 'info' | 'warn' | 'error';
@@ -390,7 +390,7 @@ export type CommandCallbackOptions = {
     message: Message | null;
     /** The Discord.JS CommandInteraction Instance  */
     interaction: CommandInteraction | null;
-    /** The Discord.JS CommandInteractionOptionResolber Instance */
+    /** The Discord.JS CommandInteractionOptionResolver Instance */
     options: CommandInteractionOptionResolver | null;
     /** The arguments passed to the command */
     args: string[];
@@ -403,7 +403,7 @@ export type CommandCallbackOptions = {
     /** The user who ran this command */
     user: User;
     /** The text channel the command was ran from */
-    channel: Channel | TextBasedChannel | null;
+    channel: GuildChannel | GuildTextBasedChannel | null;
     /** Cancels the cooldown for this command */
     cancelCooldown: () => void;
     /** Updates the cooldown for this command */

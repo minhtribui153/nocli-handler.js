@@ -21,6 +21,7 @@ import mongoose from 'mongoose';
 
 import { DebugOptions, MongoDBConnection, MongoDBResult, NoCliEmojiConfigOptions, NoCliEmojiOptions, NoCliHandlerOptions } from "./types";
 import { log } from "./functions/log";
+import handleCommandAutocomplete from './functions/handle-command-autocomplete';
 import handleError from "./functions/handle-error";
 import showIntroBanner from './functions/show-intro-banner';
 import Command from './command-handler/Command';
@@ -149,4 +150,7 @@ class NoCliHandler {
         );
     }
 }
+
+handleCommandAutocomplete
+export { log, handleCommandAutocomplete, handleError }
 export default NoCliHandler;
