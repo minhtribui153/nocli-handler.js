@@ -15,19 +15,21 @@ export * from "./errors/NoCliHandlerError";
 // <---- IMPORTS ---->
 import { Client } from 'discord.js';
 import CommandHandler from "./command-handler/CommandHandler";
+import EventHandler from './event-handler/EventHandler';
 import Cooldowns from './util/Cooldowns';
 import NoCliHandlerError from "./errors/NoCliHandlerError";
 import mongoose from 'mongoose';
 
-import { DebugOptions, MongoDBConnection, MongoDBResult, NoCliEmojiConfigOptions, NoCliEmojiOptions, NoCliHandlerOptions } from "./types";
+import { DebugOptions, MongoDBConnection, MongoDBResult, NoCliEmojiConfigOptions, NoCliEmojiOptions, NoCliHandlerOptions, ValidationPluginsOption } from "./types";
 import { log } from "./functions/log";
 import handleCommandAutocomplete from './functions/handle-command-autocomplete';
 import handleError from "./functions/handle-error";
 import showIntroBanner from './functions/show-intro-banner';
 import Command from './command-handler/Command';
 
+/** The base class of nocli-handler.js */
 class NoCliHandler {
-    private _version: string = 'v1.1.1';
+    private _version: string = 'v1.1.2';
     private _defaultPrefix: string = "!";
     private _testServers: string[];
     private _botOwners: string[];
@@ -36,6 +38,8 @@ class NoCliHandler {
     private _showBanner: boolean = true;
     private _commands: Map<string, Command> = new Map();
     private _commandHandler?: CommandHandler;
+    private _validations?: ValidationPluginsOption;
+    private _eventHandler?: EventHandler;
     private _emojiConfig: NoCliEmojiOptions;
     private _cooldowns: Cooldowns;
     private _debugging: DebugOptions;
@@ -59,6 +63,9 @@ class NoCliHandler {
         this._client = client;
         this._debugging = debugging;
         this._testServers = testServers;
+        this._validations = configuration.validations;
+        this._disabledDefaultCommands = disabledDefaultCommands.map(cmd => cmd.toLowerCase());
+        this._botOwners = botOwners;
         this._emojiConfig = {
             success: emojiConfig.success || "",
             info: emojiConfig.info || "",
@@ -66,8 +73,6 @@ class NoCliHandler {
             disabled: emojiConfig.disabled || "",
             error: emojiConfig.error || ""
         };
-        this._disabledDefaultCommands = disabledDefaultCommands.map(cmd => cmd.toLowerCase());
-        this._botOwners = botOwners;
         this._cooldowns = new Cooldowns({
             instance: this,
             errorMessage: cooldownConfig?.defaultErrorMessage,
@@ -109,14 +114,16 @@ class NoCliHandler {
 
                     this._mongoDBConnection = await this.connectToMongoDB(mongoDB);
 
-                    this.mongoDBConnection.connected
+                    this._mongoDBConnection.connected
                         ? log('MongoDBInstance', "info", 'Connected to Database')
                         : log('MongoDBInstance', "warn", this.mongoDBConnection.errMessage!);
 
                     if (configuration.commandsDir) {
                         this._commandHandler = new CommandHandler(this, configuration.commandsDir, language);
                         this._commands = this._commandHandler.commands;
-                    } else log("CommandHandlerWarning", "warn", "No commands directory provided, you will have to handle the commands yourself");
+                    } else log("CommandHandlerWarning", "warn", "No commands directory provided, you will have to handle commands yourself");
+
+                    this._eventHandler = new EventHandler(this, client, language, configuration.events);
                 });
         } catch (err) {
             const error = err as any;
@@ -135,9 +142,11 @@ class NoCliHandler {
     public get defaultPrefix(): string { return this._defaultPrefix }
     public get debug(): DebugOptions | undefined { return this._debugging }
     public get commandHandler(): CommandHandler | undefined { return this._commandHandler }
+    public get eventHandler(): EventHandler | undefined { return this._eventHandler }
     public get commands(): Map<string, Command> | undefined { return this._commands }
     public get emojiConfig(): NoCliEmojiConfigOptions { return this._emojiConfig }
     public get cooldowns(): Cooldowns { return this._cooldowns }
+    public get validations(): ValidationPluginsOption | undefined { return this._validations }
     public get mongoDBConnection(): MongoDBResult { return this._mongoDBConnection }
 
     private async connectToMongoDB(mongoDB?: MongoDBConnection): Promise<MongoDBResult> {
@@ -146,7 +155,7 @@ class NoCliHandler {
                 ? mongoose.connect(mongoDB.uri, mongoDB.options ? mongoDB.options : { keepAlive: true, directConnection: true }, (err) => err
                     ? resolve({ connected: false, errMessage: err.message })
                     : resolve({ connected: true }))
-                : resolve({ connected: false, errMessage: "MongoDB URI not found" })
+                : resolve({ connected: false, errMessage: "MongoDB URI not found, some features will not work!" })
         );
     }
 }

@@ -1,13 +1,19 @@
 {
-  "compilerOptions": {
-    "target": "esnext",
-    "module": "commonjs",
-    "rootDir": "./src",
-    "resolveJsonModule": true,
-    "outDir": "./dist",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "skipLibCheck": true
-  }
+    "compilerOptions": {
+        "declaration": true,
+        "target": "esnext",
+        "module": "commonjs",
+        "rootDir": "./src",
+        "declarationDir": "./typings",
+        "outDir": "./dist",
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "strict": true,
+        "skipLibCheck": true,
+        "noImplicitOverride": false
+    },
+    "exclude": [
+        "./typings/*"
+    ]
 }

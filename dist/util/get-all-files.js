@@ -1,18 +1,22 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require('fs');
-function getAllFiles(path) {
+function getAllFiles(path, foldersOnly = false) {
     const files = fs.readdirSync(path, {
         withFileTypes: true
     });
-    let commandFiles = [];
+    let filesFound = [];
     for (const file of files) {
+        const fileName = path + '/' + file.name;
         if (file.isDirectory()) {
-            commandFiles = [...commandFiles, ...getAllFiles(path + '/' + file.name)];
+            if (foldersOnly)
+                filesFound.push(fileName);
+            else
+                filesFound = [...filesFound, ...getAllFiles(fileName)];
             continue;
         }
-        commandFiles.push(path + '/' + file.name);
+        filesFound.push(fileName);
     }
-    return commandFiles;
+    return filesFound;
 }
 exports.default = getAllFiles;

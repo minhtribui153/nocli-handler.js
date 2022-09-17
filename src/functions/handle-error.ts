@@ -1,6 +1,7 @@
 import { log } from "./log";
 
-export default (error: any, showFullErrorLog: boolean | undefined, command?: string) => {
+export default (error: any, showFullErrorLog: boolean | undefined, argument?: string, type?: "Command" | "Event") => {
+    const currentType = type || "Command";
     const fullErrorLog = showFullErrorLog !== undefined
         ? showFullErrorLog
             ? true
@@ -8,7 +9,7 @@ export default (error: any, showFullErrorLog: boolean | undefined, command?: str
         : false;
     
     if (fullErrorLog) console.log(error.stack);
-    else log(`${error.name}${command ? `: Command "${command}"` : ""}`, "error", error.message);
+    else log(`${error.name}${argument ? `: ${currentType} "${argument}"` : ""}`, "error", error.message);
 
     return process.exit(1);
 }
