@@ -30,7 +30,7 @@ class EventHandler {
         this._suffix = language === "TypeScript" ? "ts" : "js";
         this._builtInEvents = {
             interactionCreate: {
-                isCommand: interaction => interaction.isChatInputCommand()
+                isCommand: interaction => interaction.isChatInputCommand() || interaction.isAutocomplete()
             },
             messageCreate: {
                 isHuman: message => !message.author.bot
