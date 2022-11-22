@@ -17,7 +17,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handleError = exports.handleCommandAutocomplete = exports.log = void 0;
+exports.Cooldowns = exports.EventHandler = exports.CommandHandler = exports.handleError = exports.handleCommandAutocomplete = exports.log = void 0;
 // <---- EXPORTS ---->
 // Functions
 __exportStar(require("./functions/log"), exports);
@@ -32,8 +32,11 @@ __exportStar(require("./util/Cooldowns"), exports);
 __exportStar(require("./errors/NoCliCommandError"), exports);
 __exportStar(require("./errors/NoCliHandlerError"), exports);
 const CommandHandler_1 = __importDefault(require("./command-handler/CommandHandler"));
+exports.CommandHandler = CommandHandler_1.default;
 const EventHandler_1 = __importDefault(require("./event-handler/EventHandler"));
+exports.EventHandler = EventHandler_1.default;
 const Cooldowns_1 = __importDefault(require("./util/Cooldowns"));
+exports.Cooldowns = Cooldowns_1.default;
 const NoCliHandlerError_1 = __importDefault(require("./errors/NoCliHandlerError"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const log_1 = require("./functions/log");
@@ -43,12 +46,16 @@ exports.handleCommandAutocomplete = handle_command_autocomplete_1.default;
 const handle_error_1 = __importDefault(require("./functions/handle-error"));
 exports.handleError = handle_error_1.default;
 const show_intro_banner_1 = __importDefault(require("./functions/show-intro-banner"));
+const FeatureHandler_1 = __importDefault(require("./util/FeatureHandler"));
 /** The base class of nocli-handler.js */
 class NoCliHandler {
     _version = 'v1.1.2';
     _defaultPrefix = "!";
+    /** @ts-ignore */
     _testServers;
+    /** @ts-ignore */
     _botOwners;
+    /** @ts-ignore */
     _disabledDefaultCommands;
     _mongoDBConnection = { connected: false, errMessage: "MongoDB URI not found" };
     _showBanner = true;
@@ -56,12 +63,18 @@ class NoCliHandler {
     _commandHandler;
     _validations;
     _eventHandler;
+    /** @ts-ignore */
     _emojiConfig;
+    /** @ts-ignore */
     _cooldowns;
+    /** @ts-ignore */
     _debugging;
+    /** @ts-ignore */
     _client;
     constructor(options) {
-        const { botOwners = [], client, configuration, cooldownConfig, debugging = {}, emojiConfig = {}, language, mongoDB, testServers = [], disabledDefaultCommands = [] } = options;
+        this.init(options);
+    }
+    async init({ botOwners = [], client, configuration, cooldownConfig, debugging = {}, emojiConfig = {}, language, mongoDB, testServers = [], disabledDefaultCommands = [] }) {
         this._client = client;
         this._debugging = debugging;
         this._testServers = testServers;
@@ -85,36 +98,36 @@ class NoCliHandler {
             this._defaultPrefix = configuration.defaultPrefix;
         if (debugging && debugging.showBanner !== undefined)
             this._showBanner = debugging.showBanner;
-        try {
-            if (this._showBanner)
-                (0, show_intro_banner_1.default)(this._version);
-            if (!language || (language !== "JavaScript" && language !== "TypeScript"))
-                throw new NoCliHandlerError_1.default("Invalid language specified");
-            if (!client)
-                throw new NoCliHandlerError_1.default("No client provided");
-            client
-                .setMaxListeners(Infinity)
-                .on("ready", async (client) => {
-                (0, log_1.log)("NoCliHandler", "info", `Your bot ${client.user.tag} is up and running`);
-                if (!botOwners.length) {
-                    // Fetch
-                    await client.application.fetch();
-                    await client.guilds.fetch();
-                    const { owner } = client.application;
-                    if (owner) {
+        if (this._showBanner)
+            (0, show_intro_banner_1.default)(this._version);
+        if (!language || (language !== "JavaScript" && language !== "TypeScript"))
+            throw new NoCliHandlerError_1.default("Invalid language specified");
+        if (!client)
+            throw new NoCliHandlerError_1.default("No client provided");
+        client
+            .setMaxListeners(Infinity)
+            .on("ready", async (client) => {
+            (0, log_1.log)("NoCliHandler", "info", `Your bot ${client.user.tag} is up and running`);
+            if (!botOwners.length) {
+                // Fetch
+                await client.application.fetch();
+                await client.guilds.fetch();
+                const { owner } = client.application;
+                if (owner) {
+                    // @ts-ignore
+                    if (owner.members !== undefined) {
                         // @ts-ignore
-                        if (owner.members !== undefined) {
-                            // @ts-ignore
-                            const owners = owner.members.map(member => member.id);
-                            this._botOwners.push(...owners);
-                            (0, log_1.log)("NoCliHandler", "info", `Auto set IDs "${owners.join('", "')}" as default owners`);
-                        }
-                        else {
-                            this._botOwners.push(owner.id);
-                            (0, log_1.log)("NoCliHandler", "info", `Auto set ID "${owner.id}" as a default owner`);
-                        }
+                        const owners = owner.members.map(member => member.id);
+                        this._botOwners.push(...owners);
+                        (0, log_1.log)("NoCliHandler", "info", `Auto set IDs "${owners.join('", "')}" as default owners`);
+                    }
+                    else {
+                        this._botOwners.push(owner.id);
+                        (0, log_1.log)("NoCliHandler", "info", `Auto set ID "${owner.id}" as a default owner`);
                     }
                 }
+            }
+            try {
                 this._mongoDBConnection = await this.connectToMongoDB(mongoDB);
                 this._mongoDBConnection.connected
                     ? (0, log_1.log)('MongoDBInstance', "info", 'Connected to Database')
@@ -125,16 +138,16 @@ class NoCliHandler {
                 }
                 else
                     (0, log_1.log)("CommandHandlerWarning", "warn", "No commands directory provided, you will have to handle commands yourself");
+                if (configuration.featuresDir)
+                    new FeatureHandler_1.default(this, configuration.featuresDir, client, language);
                 this._eventHandler = new EventHandler_1.default(this, client, language, configuration.events);
-            });
-        }
-        catch (err) {
-            const error = err;
-            const showFullErrorLog = debugging !== undefined
-                ? debugging.showFullErrorLog
-                : false;
-            (0, handle_error_1.default)(error, showFullErrorLog);
-        }
+            }
+            catch (err) {
+                const error = err;
+                const showFullErrorLog = debugging !== undefined ? debugging.showFullErrorLog : false;
+                (0, handle_error_1.default)(error, showFullErrorLog);
+            }
+        });
     }
     get client() { return this._client; }
     get testServers() { return this._testServers; }
@@ -149,6 +162,7 @@ class NoCliHandler {
     get cooldowns() { return this._cooldowns; }
     get validations() { return this._validations; }
     get mongoDBConnection() { return this._mongoDBConnection; }
+    get debugging() { return this._debugging; }
     async connectToMongoDB(mongoDB) {
         return new Promise((resolve) => mongoDB
             ? mongoose_1.default.connect(mongoDB.uri, mongoDB.options ? mongoDB.options : { keepAlive: true, directConnection: true }, (err) => err

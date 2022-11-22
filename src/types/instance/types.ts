@@ -44,12 +44,16 @@ export type ConfigOptions = {
     defaultPrefix?: string;
     /** The directory where the commands are stored */
     commandsDir?: string;
+    /** The directory where the features are stored */
+    featuresDir?: string;
     /** The configurations for events */
     events?: EventConfigurationOptions;
     /** The configurations for validation plugins */
     validations?: ValidationPluginsOption;
     /** The configurations for command categories */
     categories?: NoCliCategoryConfiguration;
+    /** Whether to enable sharding for the bot (only necessary if your bot reaches more than 2000 servers) */
+    sharding: boolean;
 }
 
 export type ValidationPluginsOption = {

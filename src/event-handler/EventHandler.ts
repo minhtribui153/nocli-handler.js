@@ -8,7 +8,7 @@ import path from "path";
 import importFile from "../util/import-file";
 import NoCliEventError from "../errors/NoCliEventError";
 
-
+/** The nocli-handler.js event handler responsible for handling actions related to Discord.JS Events */
 class EventHandler {
     // <eventName, array of [function, dynamic validation functions]>
     private _eventCallbacks = new Map<string, Array<any>[]>();
@@ -47,6 +47,7 @@ class EventHandler {
         //handleError(err, showFullErrorLog);
     }
 
+    /** Reads the files from the events directory */
     private async readFiles() {
         try {
             const defaultEvents = getAllFiles(path.join(__dirname, 'events'), true);

@@ -15,6 +15,7 @@ const ChannelCommands_1 = __importDefault(require("./ChannelCommands"));
 const CustomCommands_1 = __importDefault(require("./CustomCommands"));
 const DisabledCommands_1 = __importDefault(require("./DisabledCommands"));
 const PrefixHandler_1 = __importDefault(require("./PrefixHandler"));
+/** The nocli-handler.js command handler responsible for handling actions related to commands */
 class CommandHandler {
     commands = new Map();
     commandsDir;
@@ -46,6 +47,11 @@ class CommandHandler {
         ];
         this.readFiles();
     }
+    /**
+     * Gets the validations from a folder
+     * @param {string} folder The path to the validation folder
+     * @returns {Promise<T>[]}
+     */
     getValidations(folder) {
         if (!folder)
             return [];
@@ -53,6 +59,7 @@ class CommandHandler {
             .map(filePath => (0, import_file_1.default)(filePath).then((file) => file));
         return validations;
     }
+    /** Reads the files from the commands directory */
     async readFiles() {
         try {
             const defaultCommandsFolder = path_1.default.join(__dirname, "./commands");
@@ -141,9 +148,22 @@ class CommandHandler {
             (0, handle_error_1.default)(err, showFullErrorLog);
         }
     }
+    /**
+     * Checks if the specified object is a Command instance
+     * @param {unknown} object The object to check
+     * @returns {object is Command}
+     */
     isCommand(object) {
-        return Object.prototype.hasOwnProperty.call(object, "callback") && Object.prototype.hasOwnProperty.call(object, "type");
+        return object instanceof Object && Object.prototype.hasOwnProperty.call(object, "callback") && Object.prototype.hasOwnProperty.call(object, "type");
     }
+    /**
+     * Runs the Command instance
+     * @param {Command} command The command instance
+     * @param {string[]} args The command arguments
+     * @param {Message | null} message The Message instance
+     * @param {CommandInteraction | null} interaction  The CommandInteraction instance
+     * @returns
+     */
     async runCommand(command, args, message, interaction) {
         const { callback, type, cooldowns, deferReply = false, reply = false } = command.commandObject;
         if (message && type === types_1.NoCliCommandType.Slash)

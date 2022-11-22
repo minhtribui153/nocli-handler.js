@@ -8,6 +8,7 @@ const get_all_files_1 = __importDefault(require("../util/get-all-files"));
 const path_1 = __importDefault(require("path"));
 const import_file_1 = __importDefault(require("../util/import-file"));
 const NoCliEventError_1 = __importDefault(require("../errors/NoCliEventError"));
+/** The nocli-handler.js event handler responsible for handling actions related to Discord.JS Events */
 class EventHandler {
     // <eventName, array of [function, dynamic validation functions]>
     _eventCallbacks = new Map();
@@ -37,6 +38,7 @@ class EventHandler {
         this.readFiles();
         //handleError(err, showFullErrorLog);
     }
+    /** Reads the files from the events directory */
     async readFiles() {
         try {
             const defaultEvents = (0, get_all_files_1.default)(path_1.default.join(__dirname, 'events'), true);

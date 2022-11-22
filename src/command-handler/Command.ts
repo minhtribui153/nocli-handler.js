@@ -1,6 +1,7 @@
 import { CommandOptions, ICommand } from '../types';
 import NoCliHandler from '..';
 
+/** The default nocli-handler.js command class used for command initialization */
 class Command {
     private _commandName: string;
     private _categoryName: string;

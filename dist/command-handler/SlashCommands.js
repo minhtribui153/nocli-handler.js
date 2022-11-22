@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const discord_js_1 = require("discord.js");
 const handle_error_1 = __importDefault(require("../functions/handle-error"));
 const log_1 = require("../functions/log");
+/** The nocli-handler.js feature class to handle slash commands */
 class SlashCommands {
     _client;
     _showFullErrorLog;
@@ -15,7 +16,8 @@ class SlashCommands {
     }
     /**
      * Gets the Slash commands based on the guild ID.
-     * @param guildId The guild id (optional)
+     * @param {string | null | undefined} guildId The Guild ID (optional)
+     * @returns {Promise<ApplicationCommandManager | GuildApplicationCommandManager>}
      */
     async getCommands(guildId) {
         let commands;
@@ -31,6 +33,12 @@ class SlashCommands {
         await commands.fetch();
         return commands;
     }
+    /**
+     * Finds a slash command
+     * @param {string} commandId The Slash Command ID
+     * @param {string | undefined} guildId The Guild ID
+     * @returns {Promise<ApplicationCommand<{}> | undefined>}
+     */
     async findCommand(commandId, guildId) {
         const commands = await this.getCommands(guildId);
         const command = commands.cache.get(commandId);
@@ -40,6 +48,7 @@ class SlashCommands {
      * Checks if the new slash command option and the old one are different
      * @param {ApplicationCommandOption[]} existingOptions The current slash command options.
      * @param {ApplicationCommandOptionData[]} options The new slash command options.
+     * @returns {boolean}
      */
     optionsAreDifferent(existingOptions, options) {
         for (let i = 0; i < options.length; ++i) {
@@ -53,8 +62,8 @@ class SlashCommands {
     }
     /**
      * Creates a new Slash Command
-     * @param name The name of the command
-     * @param description The description of the command
+     * @param {string} name The name of the command
+     * @param {string} description The description of the command
      * @param options The command options
      * @param guildId The guild ID (optional)
      */
@@ -90,7 +99,7 @@ class SlashCommands {
     /**
      * Deletes a Slash Command
      * @param commandName The name of the command
-     * @param guildId  The guild ID (optional)
+     * @param guildId The guild ID (optional)
      */
     async delete(commandName, guildId = '') {
         const commands = await this.getCommands(guildId);

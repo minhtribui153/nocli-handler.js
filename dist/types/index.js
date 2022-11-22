@@ -18,6 +18,7 @@ __exportStar(require("./categories"), exports);
 __exportStar(require("./commands"), exports);
 __exportStar(require("./cooldowns"), exports);
 __exportStar(require("./events"), exports);
+__exportStar(require("./features"), exports);
 __exportStar(require("./instance"), exports);
 __exportStar(require("./local"), exports);
 __exportStar(require("./validations"), exports);

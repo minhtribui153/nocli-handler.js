@@ -1,4 +1,3 @@
-import { Channel } from "diagnostics_channel";
 import { ApplicationCommandOptionType, CommandInteractionOptionResolver, TextChannel } from "discord.js";
 import handleCommandAutocomplete from "../../functions/handle-command-autocomplete";
 import { ICommand, NoCliCommandType } from "../../types";
@@ -30,7 +29,7 @@ export default {
     callback: async ({ instance, guild, options }) => {
         const commandName = options!.getString('command', true);
         const channel = options!.getChannel('channel');
-
+        
         const command = instance.commandHandler?.commands.get(commandName.toLowerCase());
         if (!command) return {
             content: `${instance.emojiConfig.error} Command "${commandName}" doesn't exist`,

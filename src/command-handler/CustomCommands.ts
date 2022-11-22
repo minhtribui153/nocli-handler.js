@@ -3,6 +3,7 @@ import { CommandInteraction, Message } from "discord.js";
 import customCommandsSchema from "../models/custom-commands-schema";
 import CommandHandler from "./CommandHandler";
 
+/** The nocli-handler.js feature class that handles custom commands */
 class CustomCommands {
     private _customCommands = new Map<string, string>();
     private _commandHandler: CommandHandler;
@@ -15,6 +16,7 @@ class CustomCommands {
     // guildId-commandName: response
     get commands(): Map<string, string> { return this._customCommands }
 
+    /** Loads the custom commands */
     async loadCommands() {
         const results = await customCommandsSchema.find({});
 
@@ -24,6 +26,14 @@ class CustomCommands {
         }
     }
 
+    /**
+     * Creates a custom command for a guild
+     * @param {string} guildId The Guild ID
+     * @param {string} commandName The command name
+     * @param {string} description The command description
+     * @param {string} response The command response
+     * @returns {Promise<void>}
+     */
     async create(guildId: string, commandName: string, description: string, response: string) {
         const _id = `${guildId}-${commandName}`;
 
@@ -34,6 +44,12 @@ class CustomCommands {
         await customCommandsSchema.findOneAndUpdate({ _id }, { _id, response }, { upsert: true })
     }
 
+    /**
+     * Deletes a custom command from a guild
+     * @param {string} guildId The Guild ID
+     * @param {string} commandName The command name
+     * @returns {Promise<void>}
+     */
     async delete(guildId: string, commandName: string) {
         const _id = `${guildId}-${commandName}`;
 
@@ -44,6 +60,13 @@ class CustomCommands {
         await customCommandsSchema.deleteOne({ _id });
     }
 
+    /**
+     * Runs a custom command in a guild
+     * @param {string} commandName The command name
+     * @param {Message} message The Message instance
+     * @param {CommandInteraction} interaction The CommandInteraction instance
+     * @returns {Promise<void>}
+     */
     async run(commandName: string, message?: Message, interaction?: CommandInteraction) {
         const guild = message ? message.guild : interaction!.guild;
 

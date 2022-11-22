@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+/** The default nocli-handler.js command class used for command initialization */
 class Command {
     _commandName;
     _categoryName;

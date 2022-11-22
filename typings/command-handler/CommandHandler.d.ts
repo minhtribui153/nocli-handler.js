@@ -7,6 +7,7 @@ import ChannelCommands from "./ChannelCommands";
 import CustomCommands from "./CustomCommands";
 import DisabledCommands from "./DisabledCommands";
 import PrefixHandler from "./PrefixHandler";
+/** The nocli-handler.js command handler responsible for handling actions related to commands */
 declare class CommandHandler {
     commands: Map<string, Command>;
     commandsDir: string;
@@ -25,9 +26,28 @@ declare class CommandHandler {
     get prefixHandler(): PrefixHandler;
     get disabledCommands(): DisabledCommands;
     constructor(instance: NoCliHandler, commandsDir: string, language: NoCliLanguageType);
+    /**
+     * Gets the validations from a folder
+     * @param {string} folder The path to the validation folder
+     * @returns {Promise<T>[]}
+     */
     private getValidations;
+    /** Reads the files from the commands directory */
     private readFiles;
+    /**
+     * Checks if the specified object is a Command instance
+     * @param {unknown} object The object to check
+     * @returns {object is Command}
+     */
     isCommand(object: unknown): object is Command;
+    /**
+     * Runs the Command instance
+     * @param {Command} command The command instance
+     * @param {string[]} args The command arguments
+     * @param {Message | null} message The Message instance
+     * @param {CommandInteraction | null} interaction  The CommandInteraction instance
+     * @returns
+     */
     runCommand(command: Command, args: string[], message: Message | null, interaction: CommandInteraction | null): Promise<{
         response: string;
         reply: boolean;
